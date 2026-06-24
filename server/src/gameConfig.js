@@ -6,7 +6,7 @@ const GAME_CONFIG = {
   HOLDING_COST: 0.50,
   SHORTAGE_COST: 1.00,
   ROUND_TIME_SECONDS: 60,
-  ROLES: ["retailer", "wholesaler", "distributor", "manufacturer"],
+  ROLES: ['retailer', 'wholesaler', 'distributor', 'manufacturer'],
   DEMAND_CURVE: [4,4,4,4,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8,8],
   EXCELLENT_THRESHOLD: {
     retailer: 150,
