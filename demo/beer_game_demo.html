@@ -2,667 +2,649 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>🍺 啤酒供應鏈遊戲</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
-:root {
-  --bg:      #0d0d1a;
-  --bg2:     #1a1a2e;
-  --panel:   #0f1b35;
-  --border:  #2a3a6e;
-  --text:    #e0e0ff;
-  --dim:     #5a6080;
-  --blue:    #4fc3f7;
-  --green:   #4ade80;
-  --yellow:  #fbbf24;
-  --red:     #f87171;
-  --purple:  #a78bfa;
-  --gold:    #ffd700;
+*{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated;image-rendering:crisp-edges}
+:root{
+  --ink:#0d0208;--paper:#1a0e1f;--panel:#120916;
+  --b1:#4f46e5;--b2:#818cf8;
+  --c0:#e2e8f0;--c1:#94a3b8;--c2:#475569;
+  --blue:#38bdf8;--grn:#4ade80;--yel:#facc15;--red:#f87171;--pur:#c084fc;
+  --gold:#fde68a;
+  --px:2px;/* base pixel unit */
 }
+html,body{background:var(--ink);color:var(--c0);font-family:'Press Start 2P',monospace;font-size:10px;min-height:100vh}
+/* scanlines */
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent 1px,rgba(0,0,0,.18) 1px,rgba(0,0,0,.18) 2px);pointer-events:none;z-index:9998}
+/* crt curve vignette */
+body::after{content:'';position:fixed;inset:0;background:radial-gradient(ellipse at center,transparent 60%,rgba(0,0,0,.7) 100%);pointer-events:none;z-index:9997}
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ── pixel box ── */
+.pbox{background:var(--panel);outline:2px solid var(--b1);outline-offset:-2px;box-shadow:4px 4px 0 #000;position:relative}
+.pbox::before{content:'';position:absolute;inset:2px;outline:1px solid rgba(255,255,255,.06);pointer-events:none}
+.pbox-hi{outline-color:var(--grn);box-shadow:4px 4px 0 #000,0 0 16px rgba(74,222,128,.2)}
 
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, 'Microsoft JhengHei', sans-serif;
-  min-height: 100vh;
-  max-width: 480px;
-  margin: 0 auto;
-}
+/* ── pixel button ── */
+.pbtn{font-family:'Press Start 2P',monospace;font-size:9px;padding:8px 12px;border:2px solid;background:var(--panel);cursor:pointer;box-shadow:3px 3px 0 #000;display:inline-block;line-height:1;transition:filter .05s;letter-spacing:.02em}
+.pbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+.pbtn:hover{filter:brightness(1.2)}
+.pbtn-b{color:var(--blue);border-color:var(--blue)}
+.pbtn-g{color:var(--grn);border-color:var(--grn)}
+.pbtn-y{color:var(--yel);border-color:var(--yel)}
+.pbtn-r{color:var(--red);border-color:var(--red)}
+.pbtn-p{color:var(--pur);border-color:var(--pur)}
+.pbtn-w{color:var(--c0);border-color:var(--c0)}
 
-/* 掃描線 */
-body::after {
-  content:'';position:fixed;inset:0;
-  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);
-  pointer-events:none;z-index:9999;
-}
+/* ── input ── */
+.pinput{font-family:'Press Start 2P',monospace;font-size:14px;background:#000;color:var(--grn);border:2px solid var(--grn);padding:10px 14px;width:100%;outline:none;box-shadow:inset 2px 2px 0 #001500;caret-color:var(--grn);text-align:center}
+.pinput:focus{border-color:var(--blue);box-shadow:inset 2px 2px 0 #000c24,0 0 0 2px rgba(56,189,248,.3)}
 
-.screen { display:none; }
-.screen.active { display:block; min-height:100vh; }
+/* ── typography ── */
+.t-title{font-size:18px;line-height:1.4}
+.t-lg{font-size:14px}
+.t-md{font-size:10px}
+.t-sm{font-size:8px}
+.t-xs{font-size:7px}
 
-/* ── 像素邊框 ── */
-.card {
-  background: var(--panel);
-  border: 2px solid var(--border);
-  border-radius: 0;
-  box-shadow: 4px 4px 0 #000;
-}
+/* ── screens ── */
+.screen{display:none;min-height:100vh}
+.screen.on{display:block}
 
-/* ── 按鈕 ── */
-.btn {
-  font-family: inherit;
-  font-weight: 700;
-  border: 2px solid;
-  cursor: pointer;
-  background: var(--panel);
-  transition: transform 0.05s, filter 0.05s;
-  display: block;
-  width: 100%;
-}
-.btn:active { transform: translate(2px,2px); box-shadow: none !important; }
-.btn:hover  { filter: brightness(1.15); }
-.btn-blue   { color: var(--blue);   border-color: var(--blue);   box-shadow: 4px 4px 0 #000; }
-.btn-green  { color: var(--green);  border-color: var(--green);  box-shadow: 4px 4px 0 #000; }
-.btn-gold   { color: var(--gold);   border-color: var(--gold);   box-shadow: 4px 4px 0 #000; }
-.btn-yellow { color: var(--yellow); border-color: var(--yellow); box-shadow: 4px 4px 0 #000; }
-.btn-red    { color: var(--red);    border-color: var(--red);    box-shadow: 4px 4px 0 #000; }
+/* ── animations ── */
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+@keyframes march{to{background-position:16px 0}}
+@keyframes glow{0%,100%{text-shadow:0 0 4px currentColor}50%{text-shadow:0 0 18px currentColor,0 0 36px currentColor}}
+@keyframes slidein{from{transform:translateY(12px);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+@keyframes countdown{from{width:100%}to{width:0%}}
+.float{animation:float 1.8s ease-in-out infinite}
+.blink{animation:blink 1s step-end infinite}
+.glow{animation:glow 2s ease-in-out infinite}
+.slidein{animation:slidein .25s ease-out}
 
-/* ── 動畫 ── */
-@keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.6} }
-@keyframes glow    { 0%,100%{text-shadow:0 0 6px currentColor} 50%{text-shadow:0 0 20px currentColor,0 0 40px currentColor} }
-@keyframes shake   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
-@keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+/* ── dither border ── */
+.dither-t{border-top:4px solid transparent;border-image:repeating-linear-gradient(90deg,var(--b1) 0,var(--b1) 4px,transparent 4px,transparent 8px) 4}
+.dither-b{border-bottom:4px solid transparent;border-image:repeating-linear-gradient(90deg,var(--b1) 0,var(--b1) 4px,transparent 4px,transparent 8px) 4}
 
-.float   { animation: float 2s ease-in-out infinite; }
-.blink   { animation: blink 1s step-end infinite; }
-.pulse   { animation: pulse 1.5s ease-in-out infinite; }
-.glow    { animation: glow 2s ease-in-out infinite; }
-.shake   { animation: shake 0.3s ease-in-out; }
-.slide-in{ animation: slideIn 0.3s ease-out; }
+/* ── pixel progress ── */
+.prog-wrap{background:#000;border:2px solid var(--b1);height:12px;overflow:hidden}
+.prog-fill{height:100%;background:repeating-linear-gradient(90deg,var(--grn) 0,var(--grn) 4px,#003300 4px,#003300 8px);transition:width .15s steps(8)}
 
-/* ── 像素柱狀圖 ── */
-.pixel-chart {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  background: #000;
-  border: 2px solid var(--border);
-  padding: 6px 6px 0;
-  height: 60px;
-}
-.pixel-bar {
-  flex: 1;
-  min-width: 3px;
-  transition: height 0.2s;
-  image-rendering: pixelated;
-}
+/* ── pixel chart ── */
+.pchart{display:flex;align-items:flex-end;gap:2px;background:#000;border:2px solid var(--b1);padding:4px 4px 0;height:52px}
+.pbar{flex:1;min-width:4px}
 
-/* ── 輸入框 ── */
-.px-input {
-  font-family: inherit;
-  font-size: 1.4rem;
-  font-weight: 700;
-  background: #000;
-  color: var(--green);
-  border: 2px solid var(--green);
-  padding: 10px 14px;
-  width: 100%;
-  outline: none;
-  text-align: center;
-  box-shadow: inset 2px 2px 0 #002200;
-  caret-color: var(--green);
-}
-.px-input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue)33; }
+/* ── role card select ── */
+.role-row{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:2px solid var(--b1);transition:background .1s}
+.role-row:hover{background:#1f0d2a}
+.role-row:last-child{border-bottom:none}
 
-/* ── 數字大顯示 ── */
-.big-num { font-size: 2.5rem; font-weight: 900; line-height: 1; }
-.med-num { font-size: 1.4rem; font-weight: 700; }
-.label   { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.05em; }
+/* ── stat tile ── */
+.tile{padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:4px}
+.tile-val{font-size:22px;line-height:1}
+.tile-lab{font-size:7px;color:var(--c2);letter-spacing:.03em}
 
-/* ── 角色卡 ── */
-.role-card {
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: transform 0.05s;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-.role-card:active { transform: translate(2px,2px); }
+/* ── hud bar ── */
+.hud{background:#000;border-bottom:2px solid var(--b1);padding:6px 10px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200}
 
-/* ── 動作區（最重要的） ── */
-.action-zone {
-  background: #000d00;
-  border: 3px solid var(--green);
-  box-shadow: 0 0 20px rgba(74,222,128,0.2), 4px 4px 0 #000;
-  padding: 16px;
-}
+/* ── action zone ── */
+.az{background:#000;border:3px solid var(--grn);box-shadow:0 0 20px rgba(74,222,128,.25),4px 4px 0 #000;padding:14px}
 
-/* ── 提示橫幅 ── */
-.hint-banner {
-  background: #1a1200;
-  border-left: 4px solid var(--yellow);
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  line-height: 1.6;
-  color: var(--yellow);
-}
+/* ── hint strip ── */
+.hint{border-left:3px solid var(--yel);background:#110e00;padding:10px 12px;font-size:8px;color:var(--yel);line-height:1.9}
 
-/* ── 頂部HUD ── */
-.hud {
-  background: #000;
-  border-bottom: 2px solid var(--border);
-  padding: 8px 12px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-}
+/* ── pixel divider ── */
+.pdiv{height:2px;background:repeating-linear-gradient(90deg,var(--b1) 0,var(--b1) 4px,transparent 4px,transparent 8px);margin:10px 0}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════
-     首頁 — 選角色
-══════════════════════════════ -->
-<div id="screen-home" class="screen active">
-  <div style="padding:16px">
+<!-- ════════════════════════════════
+     SCREEN: HOME
+════════════════════════════════ -->
+<div id="s-home" class="screen on">
+<div style="max-width:400px;margin:0 auto;padding:14px 12px">
 
-    <!-- 標題 -->
-    <div style="text-align:center;padding:20px 0 16px">
-      <div style="font-size:2.5rem;margin-bottom:8px">🍺</div>
-      <div style="font-size:1.3rem;font-weight:900;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
-      <div style="font-size:0.72rem;color:var(--dim);margin-top:6px">體驗「牛鞭效應」的教學模擬</div>
-    </div>
-
-    <!-- 四個角色 → 選一個 -->
-    <div style="font-size:0.78rem;color:var(--dim);margin-bottom:10px">▶ 選擇你要扮演的角色</div>
-
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px" id="role-list">
-      <!-- JS 注入 -->
-    </div>
-
-    <!-- 遊戲說明 -->
-    <div class="card" style="padding:14px;margin-bottom:12px">
-      <div style="font-size:0.78rem;font-weight:700;margin-bottom:10px;color:var(--purple)">📖 怎麼玩？</div>
-      <div style="font-size:0.75rem;color:var(--dim);line-height:2">
-        <div>⏱ 共 <b style="color:var(--text)">20週</b>，每週 <b style="color:var(--text)">60秒</b> 決策</div>
-        <div>📦 下單後 <b style="color:var(--text)">2週</b> 才到貨（前置時間）</div>
-        <div>💰 庫存成本 <b style="color:var(--green)">$0.50</b>／箱／週</div>
-        <div>💔 缺貨成本 <b style="color:var(--red)">$1.00</b>／箱／週</div>
-        <div>🎲 每局需求隨機，遊戲結束才揭曉</div>
-      </div>
-    </div>
-
-    <!-- 最高紀錄 -->
-    <div class="card" style="padding:14px">
-      <div style="font-size:0.78rem;font-weight:700;margin-bottom:8px;color:var(--gold)">🏆 最佳紀錄</div>
-      <div id="hiscore-list" style="font-size:0.72rem;color:var(--dim);line-height:2.2">尚無紀錄</div>
-    </div>
-
+  <!-- title card -->
+  <div class="pbox" style="padding:18px;text-align:center;margin-bottom:14px">
+    <!-- pixel beer mug drawn with canvas -->
+    <canvas id="c-title-art" width="64" height="48" style="width:64px;height:48px;display:block;margin:0 auto 12px"></canvas>
+    <div class="t-title glow" style="color:var(--gold);letter-spacing:.05em">啤酒供應鏈</div>
+    <div class="t-title glow" style="color:var(--gold);letter-spacing:.05em;margin-top:4px">遊戲</div>
+    <div class="pdiv"></div>
+    <div class="t-xs" style="color:var(--c2);letter-spacing:.08em">SUPPLY CHAIN SIMULATION</div>
+    <div class="t-xs" style="color:var(--c2);margin-top:4px">體驗「牛鞭效應」的教學遊戲</div>
   </div>
+
+  <!-- 四角色預覽 -->
+  <div class="pbox" style="margin-bottom:14px">
+    <div style="padding:10px 12px 6px;font-size:8px;color:var(--c2)">▶ 選擇你的角色</div>
+    <div id="role-list"></div><!-- JS inject -->
+  </div>
+
+  <!-- 規則 -->
+  <div class="pbox" style="padding:12px;margin-bottom:14px">
+    <div class="t-sm" style="color:var(--pur);margin-bottom:10px">[ 遊戲規則 ]</div>
+    <div class="t-xs" style="color:var(--c1);line-height:2.4">
+      <div>⏱  共 <span style="color:var(--c0)">20</span> 週・每週 <span style="color:var(--c0)">60</span> 秒決策</div>
+      <div>📦 下單後 <span style="color:var(--c0)">2</span> 週才到貨（前置時間）</div>
+      <div>📈 庫存成本 <span style="color:var(--grn)">$0.50</span>／箱／週</div>
+      <div>📉 缺貨成本 <span style="color:var(--red)">$1.00</span>／箱／週</div>
+      <div>🎲 需求隨機生成・遊戲後揭曉</div>
+    </div>
+  </div>
+
+  <!-- 最高紀錄 -->
+  <div class="pbox" style="padding:12px">
+    <div class="t-sm" style="color:var(--gold);margin-bottom:8px">[ 最佳紀錄 ]</div>
+    <div id="hiscore" class="t-xs" style="color:var(--c2);line-height:2.4">尚無紀錄</div>
+  </div>
+
+</div>
 </div>
 
-<!-- ══════════════════════════════
-     角色介紹彈窗
-══════════════════════════════ -->
-<div id="screen-rolecard" class="screen">
-  <div style="padding:16px">
+<!-- ════════════════════════════════
+     SCREEN: ROLE CARD
+════════════════════════════════ -->
+<div id="s-role" class="screen">
+<div style="max-width:400px;margin:0 auto;padding:14px 12px">
 
-    <div id="rc-header" style="text-align:center;padding:20px 0 16px">
-      <canvas id="rc-sprite" width="80" height="96" style="width:80px;height:96px;image-rendering:pixelated" class="float"></canvas>
-      <div id="rc-name" style="font-size:1.2rem;font-weight:900;margin-top:10px">零售商</div>
-      <div id="rc-title" style="font-size:0.72rem;color:var(--dim);margin-top:4px"></div>
+  <!-- 角色大圖 -->
+  <div class="pbox" style="padding:20px;text-align:center;margin-bottom:12px">
+    <div class="float" style="display:inline-block">
+      <canvas id="rc-sprite" width="64" height="80" style="width:64px;height:80px;display:block;margin:0 auto"></canvas>
     </div>
-
-    <!-- 你的任務 -->
-    <div class="card" style="padding:14px;margin-bottom:12px">
-      <div style="font-size:0.78rem;font-weight:700;margin-bottom:8px">🎯 你的任務</div>
-      <div id="rc-mission" style="font-size:0.8rem;line-height:1.9;color:var(--dim)"></div>
-    </div>
-
-    <!-- 你能看到什麼 -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-      <div class="card" style="padding:12px">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--green);margin-bottom:8px">✅ 你能看到</div>
-        <div id="rc-cansee" style="font-size:0.7rem;color:var(--dim);line-height:2.2"></div>
-      </div>
-      <div class="card" style="padding:12px">
-        <div style="font-size:0.72rem;font-weight:700;color:var(--red);margin-bottom:8px">❌ 你看不到</div>
-        <div id="rc-cantsee" style="font-size:0.7rem;color:var(--dim);line-height:2.2"></div>
-      </div>
-    </div>
-
-    <!-- 胜利條件 -->
-    <div class="card" style="padding:14px;margin-bottom:12px">
-      <div style="font-size:0.72rem;color:var(--dim);margin-bottom:4px">🏆 勝利條件</div>
-      <div id="rc-victory" style="font-size:0.85rem;font-weight:700;line-height:1.7"></div>
-    </div>
-
-    <!-- 策略提示 -->
-    <div class="hint-banner" style="margin-bottom:16px">
-      <div style="font-size:0.7rem;font-weight:700;margin-bottom:4px;color:var(--yellow)">💡 策略提示</div>
-      <div id="rc-tip" style="font-size:0.75rem"></div>
-    </div>
-
-    <button class="btn btn-green" id="rc-start-btn" onclick="enterGame()"
-      style="font-size:1rem;font-weight:900;padding:16px">
-      ▶ 我準備好了，開始！
-    </button>
-
+    <div id="rc-name" class="t-lg" style="margin-top:12px;color:var(--grn)">零售商</div>
+    <div id="rc-title" class="t-xs" style="color:var(--c2);margin-top:6px;line-height:1.8"></div>
   </div>
+
+  <!-- 任務 -->
+  <div class="pbox" style="padding:12px;margin-bottom:10px">
+    <div class="t-xs" style="color:var(--pur);margin-bottom:8px">[ 你的任務 ]</div>
+    <div id="rc-mission" class="t-xs" style="color:var(--c1);line-height:2.2"></div>
+  </div>
+
+  <!-- 看得到 / 看不到 -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+    <div class="pbox" style="padding:10px">
+      <div class="t-xs" style="color:var(--grn);margin-bottom:6px">✓ 看得到</div>
+      <div id="rc-see" class="t-xs" style="color:var(--c1);line-height:2.2"></div>
+    </div>
+    <div class="pbox" style="padding:10px">
+      <div class="t-xs" style="color:var(--red);margin-bottom:6px">✗ 看不到</div>
+      <div id="rc-blind" class="t-xs" style="color:var(--c1);line-height:2.2"></div>
+    </div>
+  </div>
+
+  <!-- 勝利條件 -->
+  <div class="pbox" style="padding:12px;margin-bottom:10px">
+    <div class="t-xs" style="color:var(--c2);margin-bottom:4px">[ 勝利條件 ]</div>
+    <div id="rc-win" class="t-sm" style="color:var(--grn);line-height:1.8"></div>
+  </div>
+
+  <!-- 提示 -->
+  <div class="hint" style="margin-bottom:14px">
+    <div style="color:var(--yel);margin-bottom:4px">[ 策略提示 ]</div>
+    <div id="rc-tip"></div>
+  </div>
+
+  <button id="rc-go" class="pbtn pbtn-g" style="width:100%;font-size:10px;padding:14px;text-align:center" onclick="enterGame()">
+    ▶ 準備好了，開始遊戲！
+  </button>
+
+</div>
 </div>
 
-<!-- ══════════════════════════════
-     主遊戲畫面
-══════════════════════════════ -->
-<div id="screen-game" class="screen">
+<!-- ════════════════════════════════
+     SCREEN: GAME
+════════════════════════════════ -->
+<div id="s-game" class="screen">
 
-  <!-- 頂部 HUD -->
+  <!-- HUD -->
   <div class="hud">
     <div>
-      <div id="hud-role" style="font-size:0.7rem;font-weight:700">零售商</div>
-      <div id="hud-week-label" style="font-size:0.55rem;color:var(--dim)">第 1 週 / 共 20 週</div>
+      <div id="hud-role" class="t-sm" style="color:var(--grn)">零售商</div>
+      <div id="hud-wk" class="t-xs" style="color:var(--c2);margin-top:3px">第 1 週</div>
     </div>
     <div style="text-align:center">
-      <div id="hud-timer" style="font-size:1.4rem;font-weight:900;color:var(--gold)" class="blink">60</div>
-      <div style="font-size:0.5rem;color:var(--dim)">秒</div>
+      <div id="hud-timer" class="t-lg blink" style="color:var(--gold)">60</div>
+      <div class="t-xs" style="color:var(--c2)">秒</div>
     </div>
     <div style="text-align:right">
-      <div style="font-size:0.55rem;color:var(--dim)">累計成本</div>
-      <div id="hud-cost" style="font-size:0.85rem;font-weight:700;color:var(--red)">$0</div>
+      <div class="t-xs" style="color:var(--c2)">累計成本</div>
+      <div id="hud-cost" class="t-sm" style="color:var(--red);margin-top:2px">$0</div>
     </div>
   </div>
 
-  <div style="padding:10px">
+  <div style="max-width:400px;margin:0 auto;padding:10px 12px">
 
-    <!-- 第1區：本週狀況（你在哪） -->
-    <div style="font-size:0.65rem;color:var(--dim);margin-bottom:6px;letter-spacing:0.05em">━ 本週狀況</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-      <div class="card" style="padding:10px;text-align:center">
-        <canvas id="g-sprite-small" width="32" height="40" style="width:32px;height:40px;image-rendering:pixelated;margin:0 auto;display:block" class="float"></canvas>
-        <div class="label" style="margin-top:4px">庫存</div>
-        <div id="g-inv" class="big-num" style="color:var(--green);font-size:1.8rem">12</div>
-        <div class="label">箱</div>
+    <!-- 進度條 -->
+    <div class="prog-wrap" style="margin-bottom:10px">
+      <div id="prog" class="prog-fill" style="width:100%"></div>
+    </div>
+
+    <!-- 角色 + 三大數字 -->
+    <div style="display:grid;grid-template-columns:56px 1fr;gap:10px;margin-bottom:10px">
+      <div class="pbox tile">
+        <canvas id="g-spr" width="40" height="48" style="width:40px;height:48px" class="float"></canvas>
+        <div id="g-stars" class="t-xs" style="color:var(--gold)">★★★</div>
       </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:1.5rem;margin-bottom:2px">📬</div>
-        <div class="label">本週到貨</div>
-        <div id="g-recv" class="big-num" style="color:var(--blue);font-size:1.8rem">+0</div>
-        <div class="label">箱</div>
-      </div>
-      <div class="card" style="padding:10px;text-align:center">
-        <div style="font-size:1.5rem;margin-bottom:2px">📋</div>
-        <div class="label" id="g-demand-label">收到訂單</div>
-        <div id="g-demand" class="big-num" style="color:var(--yellow);font-size:1.8rem">—</div>
-        <div class="label">箱</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div class="pbox tile">
+          <div class="tile-lab">庫存</div>
+          <div id="g-inv" class="tile-val" style="color:var(--grn)">12</div>
+          <div class="tile-lab">箱</div>
+        </div>
+        <div class="pbox tile">
+          <div class="tile-lab">到貨</div>
+          <div id="g-recv" class="tile-val" style="color:var(--blue)">—</div>
+          <div class="tile-lab">箱</div>
+        </div>
+        <div class="pbox tile">
+          <div class="tile-lab" id="g-dlabel">需求</div>
+          <div id="g-dem" class="tile-val" style="color:var(--yel)">—</div>
+          <div class="tile-lab">箱</div>
+        </div>
       </div>
     </div>
 
-    <!-- 積壓 & 在途（次要資訊） -->
+    <!-- 次要資訊 -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
-      <div class="card" style="padding:8px;display:flex;align-items:center;gap:10px">
-        <div style="font-size:1.2rem">⚠️</div>
-        <div>
-          <div class="label">積壓訂單</div>
-          <div id="g-back" style="font-size:1.1rem;font-weight:700;color:var(--red)">0 箱</div>
-        </div>
+      <div class="pbox" style="padding:8px;display:flex;align-items:center;gap:8px">
+        <span class="t-lg">⚠</span>
+        <div><div class="t-xs" style="color:var(--c2)">積壓訂單</div><div id="g-back" class="t-sm" style="color:var(--red);margin-top:3px">0 箱</div></div>
       </div>
-      <div class="card" style="padding:8px;display:flex;align-items:center;gap:10px">
-        <div style="font-size:1.2rem">🚚</div>
-        <div>
-          <div class="label">在途貨物</div>
-          <div id="g-pipe" style="font-size:1.1rem;font-weight:700;color:var(--purple)">8 箱</div>
-        </div>
+      <div class="pbox" style="padding:8px;display:flex;align-items:center;gap:8px">
+        <span class="t-lg">🚚</span>
+        <div><div class="t-xs" style="color:var(--c2)">在途貨物</div><div id="g-pipe" class="t-sm" style="color:var(--pur);margin-top:3px">8 箱</div></div>
       </div>
     </div>
 
-    <!-- 本週成本小結 -->
-    <div id="g-cost-detail" class="card" style="padding:10px;margin-bottom:10px;display:none">
-      <div style="font-size:0.7rem;font-weight:700;color:var(--dim);margin-bottom:6px">上週結算</div>
-      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px">
-        <span style="color:var(--dim)">庫存成本</span>
-        <span id="g-hc" style="color:var(--yellow)">$0</span>
+    <!-- 上週成本明細 -->
+    <div id="g-costbox" class="pbox" style="padding:10px;margin-bottom:10px;display:none">
+      <div class="t-xs" style="color:var(--c2);margin-bottom:6px">[ 上週結算 ]</div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span class="t-xs" style="color:var(--c2)">庫存成本</span><span id="g-hc" class="t-xs" style="color:var(--yel)">$0</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:6px">
-        <span style="color:var(--dim)">缺貨成本</span>
-        <span id="g-sc" style="color:var(--red)">$0</span>
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span class="t-xs" style="color:var(--c2)">缺貨成本</span><span id="g-sc" class="t-xs" style="color:var(--red)">$0</span>
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:700;border-top:1px solid var(--border);padding-top:6px">
-        <span>本週合計</span>
-        <span id="g-wc" style="color:var(--red)">$0</span>
+      <div style="display:flex;justify-content:space-between;border-top:1px solid var(--b1);padding-top:6px">
+        <span class="t-xs" style="color:var(--c0)">本週小計</span><span id="g-wc" class="t-sm" style="color:var(--red)">$0</span>
       </div>
     </div>
 
-    <!-- ★ 第2區：動作區（最重要） ★ -->
-    <div id="action-zone" class="action-zone" style="margin-bottom:10px">
-      <div style="font-size:0.72rem;color:var(--green);font-weight:700;margin-bottom:4px" id="action-title">
-        📦 你要向批發商下幾箱？
+    <!-- ★ 動作區 ★ -->
+    <div id="g-az" class="az pbox-hi slidein" style="margin-bottom:10px">
+      <div id="g-aztitle" class="t-xs" style="color:var(--grn);margin-bottom:6px">[ 現在要做什麼 ]</div>
+      <div id="g-azq" class="t-sm" style="color:var(--c0);margin-bottom:12px">你要向批發商下幾箱？</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input type="number" min="0" id="g-input" class="pinput" placeholder="輸入數量" style="flex:1"/>
+        <button class="pbtn pbtn-g" onclick="doSubmit(parseInt(document.getElementById('g-input').value))" style="font-size:10px;padding:10px 14px">確認</button>
       </div>
-      <div style="font-size:0.65rem;color:var(--dim);margin-bottom:12px" id="action-hint-text">
-        考慮：庫存 + 在途貨物，是否足夠應付下週需求？
-      </div>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <input type="number" min="0" id="order-input" class="px-input" placeholder="輸入數量"/>
-        <button class="btn btn-green" onclick="submitOrder()"
-          style="width:auto;padding:10px 20px;font-size:1rem;font-weight:900;white-space:nowrap">
-          確認 ▶
-        </button>
-      </div>
-      <!-- 快速選擇 -->
-      <div style="display:flex;gap:6px;flex-wrap:wrap" id="quick-btns">
-        <!-- JS 注入快速按鈕 -->
-      </div>
+      <!-- 快速選鈕 -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="g-quick"></div>
     </div>
 
-    <!-- 等待狀態 -->
-    <div id="waiting-zone" style="display:none;margin-bottom:10px">
-      <div class="card" style="padding:16px;text-align:center">
-        <div style="font-size:1.5rem;margin-bottom:6px" class="pulse">⏳</div>
-        <div style="font-size:0.85rem;font-weight:700;color:var(--green)">✅ 已下單 <span id="submitted-qty">0</span> 箱</div>
-        <div style="font-size:0.7rem;color:var(--dim);margin-top:6px">等待其他玩家...</div>
+    <!-- 等待中 -->
+    <div id="g-wait" style="display:none;margin-bottom:10px">
+      <div class="pbox" style="padding:14px;text-align:center">
+        <div class="t-sm" style="color:var(--grn)">✓ 已提交 <span id="g-sub-n">0</span> 箱</div>
+        <div class="t-xs" style="color:var(--c2);margin-top:8px">計算中...</div>
       </div>
     </div>
 
     <!-- 提示 -->
-    <div id="g-hint" class="hint-banner" style="display:none;margin-bottom:10px">
-      <span id="g-hint-text"></span>
+    <div id="g-hint" class="hint slidein" style="display:none;margin-bottom:10px">
+      <div id="g-hinttext"></div>
     </div>
 
-    <!-- 第3區：歷史圖表 -->
-    <div style="font-size:0.65rem;color:var(--dim);margin-bottom:6px;letter-spacing:0.05em">━ 趨勢圖</div>
+    <!-- 圖表區 -->
+    <div class="pdiv"></div>
+    <div class="t-xs" style="color:var(--c2);margin-bottom:8px">[ 歷史走勢 ]</div>
+
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
       <div>
-        <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">📦 庫存 <span id="chart-inv-now" style="color:var(--green)"></span></div>
-        <div class="pixel-chart" id="chart-inv" style="height:56px"></div>
+        <div class="t-xs" style="color:var(--c2);margin-bottom:3px">庫存 <span id="cn-inv" style="color:var(--grn)"></span></div>
+        <div class="pchart" id="ch-inv"></div>
       </div>
       <div>
-        <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">📋 下單量 <span id="chart-ord-now" style="color:var(--yellow)"></span></div>
-        <div class="pixel-chart" id="chart-ord" style="height:56px"></div>
+        <div class="t-xs" style="color:var(--c2);margin-bottom:3px">下單 <span id="cn-ord" style="color:var(--yel)"></span></div>
+        <div class="pchart" id="ch-ord"></div>
       </div>
     </div>
     <div>
-      <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">💰 累計成本 <span id="chart-cost-now" style="color:var(--red)"></span></div>
-      <div class="pixel-chart" id="chart-cost" style="height:44px"></div>
+      <div class="t-xs" style="color:var(--c2);margin-bottom:3px">累計成本 <span id="cn-cst" style="color:var(--red)"></span></div>
+      <div class="pchart" id="ch-cst" style="height:40px"></div>
     </div>
 
   </div>
 </div>
 
-<!-- ══════════════════════════════
-     複盤畫面
-══════════════════════════════ -->
-<div id="screen-debrief" class="screen">
-  <div style="padding:16px">
+<!-- ════════════════════════════════
+     SCREEN: DEBRIEF
+════════════════════════════════ -->
+<div id="s-end" class="screen">
+<div style="max-width:400px;margin:0 auto;padding:14px 12px">
 
-    <div style="text-align:center;padding:16px 0">
-      <div style="font-size:1.5rem;font-weight:900;color:var(--gold)" class="glow">🎉 遊戲結束！</div>
-      <div style="font-size:0.72rem;color:var(--dim);margin-top:6px">供應鏈複盤</div>
-    </div>
-
-    <!-- 需求模式揭曉 -->
-    <div class="card" style="padding:14px;margin-bottom:12px;border-color:var(--yellow)">
-      <div style="font-size:0.7rem;color:var(--dim);margin-bottom:4px">🎲 本局需求模式（現在才揭曉！）</div>
-      <div id="db-mode" style="font-size:1rem;font-weight:900;color:var(--yellow)">☀️ 夏季旺季型</div>
-      <div id="db-mode-desc" style="font-size:0.72rem;color:var(--dim);margin-top:4px;line-height:1.7"></div>
-    </div>
-
-    <!-- 你的成績 -->
-    <div id="db-my-score" class="card" style="padding:14px;margin-bottom:12px;text-align:center">
-      <div style="font-size:0.72rem;color:var(--dim);margin-bottom:6px">你的總成本</div>
-      <div id="db-cost" class="big-num" style="font-size:2.2rem;color:var(--red)">$0</div>
-      <div id="db-verdict" style="font-size:0.8rem;margin-top:8px;font-weight:700"></div>
-    </div>
-
-    <!-- 排名 -->
-    <div style="font-size:0.72rem;color:var(--dim);margin-bottom:8px">📊 各角色成本排名</div>
-    <div id="db-rankings" style="margin-bottom:12px"></div>
-
-    <!-- 牛鞭效應圖 -->
-    <div class="card" style="padding:14px;margin-bottom:12px">
-      <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">📈 牛鞭效應</div>
-      <div style="font-size:0.7rem;color:var(--dim);margin-bottom:10px;line-height:1.7">
-        消費者需求只從 <b id="db-base" style="color:var(--text)">4</b> 箱變成 <b id="db-peak" style="color:var(--text)">8</b> 箱，
-        但越上游的訂單波動越大。
-      </div>
-      <!-- 圖例 -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:0.65rem">
-        <span style="color:#666">■ 消費者</span>
-        <span style="color:var(--blue)">■ 零售商</span>
-        <span style="color:var(--green)">■ 批發商</span>
-        <span style="color:var(--yellow)">■ 分銷商</span>
-        <span style="color:var(--red)">■ 製造商</span>
-      </div>
-      <canvas id="bullwhip-canvas" width="440" height="130" style="width:100%;height:130px;background:#000;border:2px solid var(--border)"></canvas>
-    </div>
-
-    <!-- 學習重點 -->
-    <div class="hint-banner" style="margin-bottom:16px">
-      <div style="font-size:0.75rem;font-weight:700;margin-bottom:6px;color:var(--yellow)">💡 牛鞭效應的啟示</div>
-      <div id="db-lesson" style="font-size:0.72rem;line-height:2;color:var(--yellow)"></div>
-    </div>
-
-    <button class="btn btn-gold" onclick="restartGame()"
-      style="font-size:1rem;font-weight:900;padding:16px;margin-bottom:12px">
-      🔄 再玩一局（新需求）
-    </button>
-
+  <div class="pbox" style="padding:16px;text-align:center;margin-bottom:12px">
+    <canvas id="end-fireworks" width="120" height="60" style="width:120px;height:60px;display:block;margin:0 auto 10px"></canvas>
+    <div class="t-title glow" style="color:var(--gold)">遊戲結束</div>
+    <div class="t-xs" style="color:var(--c2);margin-top:8px">SUPPLY CHAIN DEBRIEF</div>
   </div>
+
+  <!-- 需求揭曉 -->
+  <div class="pbox" style="padding:12px;margin-bottom:12px;border-color:var(--yel)!important;outline-color:var(--yel)">
+    <div class="t-xs" style="color:var(--c2);margin-bottom:6px">[ 🎲 本局需求模式（現在揭曉！） ]</div>
+    <div id="db-mode" class="t-lg" style="color:var(--yel)"></div>
+    <div id="db-mode-desc" class="t-xs" style="color:var(--c1);margin-top:6px;line-height:1.9"></div>
+    <!-- 需求折線圖 -->
+    <div class="t-xs" style="color:var(--c2);margin:10px 0 4px">消費者實際需求曲線</div>
+    <div class="pchart" id="db-demand-chart" style="height:44px"></div>
+  </div>
+
+  <!-- 你的成績 -->
+  <div id="db-my" class="pbox" style="padding:14px;text-align:center;margin-bottom:12px">
+    <div class="t-xs" style="color:var(--c2);margin-bottom:6px">你的角色：<span id="db-myrole" style="color:var(--grn)"></span></div>
+    <div id="db-cost" class="t-title" style="color:var(--red)">$0</div>
+    <div id="db-verdict" class="t-sm" style="margin-top:8px"></div>
+  </div>
+
+  <!-- 排名 -->
+  <div class="t-xs" style="color:var(--c2);margin-bottom:8px">[ 各角色成本排名 ]</div>
+  <div id="db-rank" style="margin-bottom:12px"></div>
+
+  <!-- 牛鞭效應圖 -->
+  <div class="pbox" style="padding:12px;margin-bottom:12px">
+    <div class="t-sm" style="color:var(--pur);margin-bottom:6px">[ 牛鞭效應圖 ]</div>
+    <div class="t-xs" style="color:var(--c1);margin-bottom:10px;line-height:1.9">
+      消費者需求只變動 <span id="db-base" style="color:var(--c0)">4</span>→<span id="db-peak" style="color:var(--c0)">8</span> 箱，<br>越上游的訂單波動越大。
+    </div>
+    <!-- 圖例 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px">
+      <span class="t-xs" style="color:#555">■消費者</span>
+      <span class="t-xs" style="color:var(--blue)">■零售</span>
+      <span class="t-xs" style="color:var(--grn)">■批發</span>
+      <span class="t-xs" style="color:var(--yel)">■分銷</span>
+      <span class="t-xs" style="color:var(--red)">■製造</span>
+    </div>
+    <canvas id="db-bw" width="360" height="110" style="width:100%;height:110px;background:#000;border:2px solid var(--b1)"></canvas>
+  </div>
+
+  <!-- 學習重點 -->
+  <div class="hint" style="margin-bottom:14px">
+    <div style="color:var(--yel);margin-bottom:6px">[ 牛鞭效應的啟示 ]</div>
+    <div id="db-lesson" class="t-xs" style="line-height:2.2"></div>
+  </div>
+
+  <button class="pbtn pbtn-y" onclick="restart()" style="width:100%;font-size:10px;padding:14px;text-align:center;margin-bottom:10px">
+    🔄 再玩一局（新需求曲線）
+  </button>
+  <button class="pbtn pbtn-b" onclick="goHome()" style="width:100%;font-size:9px;padding:10px;text-align:center">
+    ← 回首頁
+  </button>
+
+</div>
 </div>
 
-<!-- ══════════════════════════════
-     JAVASCRIPT
-══════════════════════════════ -->
 <script>
-// ── 像素角色（Canvas，16×16） ───────────────────────────────────
-const _ = null
-const P = {
-  skin:'#fbbf24', skin2:'#d97706',
-  b:'#4fc3f7',  b2:'#0288d1', b3:'#01579b',
-  g:'#4ade80',  g2:'#16a34a', g3:'#14532d',
-  y:'#fbbf24',  y2:'#f59e0b', y3:'#92400e',
-  r:'#f87171',  r2:'#dc2626', r3:'#7f1d1d',
-  w:'#e0e0ff', gr:'#607080', dk:'#0d0d1a',
-  bk:'#000000', gd:'#ffd700',
-  br:'#78350f', br2:'#292524',
+// ══════════════════════════════════════════════
+// PIXEL SPRITE RENDERER (16×16 → canvas)
+// ══════════════════════════════════════════════
+const _=null
+const K={
+  sk:'#fbbf24',sk2:'#d97706',
+  bl:'#38bdf8',bl2:'#0369a1',bl3:'#082f49',
+  gn:'#4ade80',gn2:'#15803d',gn3:'#052e16',
+  yl:'#facc15',yl2:'#b45309',yl3:'#451a03',
+  rd:'#f87171',rd2:'#b91c1c',rd3:'#450a0a',
+  pu:'#c084fc',pu2:'#7e22ce',pu3:'#2e1065',
+  wh:'#e2e8f0',gy:'#64748b',dk:'#0d0208',bk:'#000',
+  br:'#78350f',br2:'#1c0a00',
+  gd:'#fde68a',
 }
-
-const SPRITES = {
-  retailer: [
-    [_,_,_,P.b3,P.b3,P.b3,P.b3,P.b3,P.b3,P.b3,_,_,_,_,_,_],
-    [_,_,P.b2,P.b,P.b,P.b,P.b,P.b,P.b,P.b,P.b2,_,_,_,_,_],
-    [_,P.b2,P.b,P.b,P.b,P.b,P.w,P.b,P.b,P.b,P.b,P.b2,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.bk,P.skin,P.skin,P.skin,P.skin,P.bk,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin2,P.skin2,P.skin2,P.skin2,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
-    [_,P.skin,P.skin,P.b,P.b,P.b,P.b,P.b,P.b,P.skin,P.skin,_,_,_,_,_],
-    [P.w,P.w,P.b,P.b,P.b2,P.b,P.b,P.b2,P.b,P.w,P.w,P.skin,_,_,_,_],
-    [_,P.skin,P.b,P.b,P.b,P.w,P.w,P.b,P.b,P.skin,P.gr,_,_,_,_,_],
-    [_,_,P.b,P.b,P.b,P.b,P.b,P.b,P.b,_,_,_,_,_,_,_],
-    [_,_,P.b3,P.b3,P.b3,_,_,P.b3,P.b3,P.b3,_,_,_,_,_,_],
-    [_,_,P.b3,P.b3,_,_,_,_,P.b3,P.b3,_,_,_,_,_,_],
-    [_,_,P.b3,P.gr,P.gr,_,_,P.b3,P.gr,P.gr,_,_,_,_,_,_],
-    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
+// 16×16 sprites
+const SPR={
+  retailer:[
+    [_,_,_,_,K.bl3,K.bl3,K.bl3,K.bl3,K.bl3,K.bl3,_,_,_,_,_,_],
+    [_,_,_,K.bl2,K.bl,K.bl,K.bl,K.bl,K.bl,K.bl,K.bl2,_,_,_,_,_],
+    [_,_,K.bl2,K.bl,K.bl,K.bl,K.wh,K.bl,K.bl,K.bl,K.bl,K.bl2,_,_,_,_],
+    [_,_,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,K.bl2,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.bk,K.sk,K.sk,K.sk,K.sk,K.bk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk2,K.sk2,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_,_],
+    [_,K.sk,K.sk,K.bl,K.bl,K.bl,K.bl,K.bl,K.bl,K.sk,K.sk,_,_,_,_,_],
+    [K.wh,K.wh,K.bl,K.bl,K.bl2,K.bl,K.bl,K.bl2,K.bl,K.wh,K.wh,K.sk,_,_,_,_],
+    [_,K.sk,K.bl,K.bl,K.bl,K.wh,K.wh,K.bl,K.bl,K.sk,K.gy,_,_,_,_,_],
+    [_,_,K.bl,K.bl,K.bl,K.bl,K.bl,K.bl,K.bl,_,_,_,_,_,_,_],
+    [_,_,K.bl3,K.bl3,K.bl3,_,_,K.bl3,K.bl3,K.bl3,_,_,_,_,_,_],
+    [_,_,K.bl3,K.bl3,_,_,_,_,K.bl3,K.bl3,_,_,_,_,_,_],
+    [_,_,K.bl3,K.gy,K.gy,_,_,K.bl3,K.gy,K.gy,_,_,_,_,_,_],
+    [_,_,K.gy,K.gy,K.gy,_,_,K.gy,K.gy,K.gy,_,_,_,_,_,_],
+  ],
+  wholesaler:[
+    [_,_,_,_,K.gn3,K.gn3,K.gn3,K.gn3,K.gn3,K.gn3,_,_,_,_,_,_],
+    [_,_,_,K.gn2,K.gn,K.gn,K.gn,K.gn,K.gn,K.gn,K.gn2,_,_,_,_,_],
+    [_,_,K.gn2,K.gn,K.gn,K.gn,K.wh,K.gn,K.gn,K.gn,K.gn,K.gn2,_,_,_,_],
+    [_,_,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,K.gn2,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.bk,K.bk,K.sk,K.sk,K.bk,K.bk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk2,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,_,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_,_,_,_],
+    [_,K.sk,K.sk,K.gn,K.gn,K.gn,K.gn,K.gn,K.gn,K.sk,K.sk,_,_,_,_,_],
+    [K.wh,K.wh,K.gn,K.gn,K.gn2,K.gn,K.gn,K.gn2,K.gn,K.wh,K.wh,_,_,K.wh,K.wh,_],
+    [_,K.sk,K.gn,K.gn,K.gn,K.wh,K.wh,K.gn,K.gn,K.sk,_,_,_,K.wh,K.wh,_],
+    [_,_,K.dk,K.dk,K.gn,K.yl,K.gn,K.dk,K.dk,_,_,_,_,_,_,_],
+    [_,_,K.dk,K.gy,K.gy,_,_,K.gy,K.gy,K.dk,_,_,_,_,_,_],
+    [_,_,K.dk,K.gy,_,_,_,_,K.gy,K.dk,_,_,_,_,_,_],
+    [_,_,K.dk,K.yl,K.yl,_,_,K.dk,K.yl,K.yl,_,_,_,_,_,_],
+    [_,_,K.gy,K.yl,K.yl,_,_,K.gy,K.yl,K.yl,_,_,_,_,_,_],
+  ],
+  distributor:[
+    [_,_,_,K.br,K.br,K.br,K.br,K.br,K.br,K.br,_,_,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_],
+    [_,_,K.sk,K.bk,K.bk,K.bk,K.gy,K.gy,K.bk,K.bk,K.sk,_,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk2,K.sk,K.sk,K.sk2,K.sk,K.sk,K.sk,_,_,_,_,_],
+    [_,_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_,_,_],
+    [_,K.sk,K.sk,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.sk,K.sk,_,_,_,_,_],
+    [K.wh,K.wh,K.yl2,K.yl2,K.yl3,K.yl2,K.yl2,K.yl3,K.yl2,K.wh,K.wh,_,_,_,_,_],
+    [_,K.sk,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.sk,_,_,_,_,_,_],
+    [_,K.sk,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.sk,_,_,_,_,_,_],
+    [_,_,K.dk,K.dk,K.yl2,K.gd,K.yl2,K.dk,K.dk,_,_,_,_,_,_,_],
+    [_,_,K.bl3,K.bl3,K.gy,_,_,K.gy,K.bl3,K.bl3,_,_,_,_,_,_],
+    [_,_,K.bl3,K.bl3,_,_,_,_,K.bl3,K.bl3,_,_,_,_,_,_],
+    [_,_,K.gy,K.gy,K.gy,_,_,K.gy,K.gy,K.gy,_,_,_,_,_,_],
+    [_,_,K.gy,K.gy,K.gy,_,_,K.gy,K.gy,K.gy,_,_,_,_,_,_],
     [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   ],
-  wholesaler: [
-    [_,_,_,P.g3,P.g3,P.g3,P.g3,P.g3,P.g3,P.g3,_,_,_,_,_,_],
-    [_,_,P.g2,P.g,P.g,P.g,P.g,P.g,P.g,P.g,P.g2,_,_,_,_,_],
-    [_,P.g2,P.g,P.g,P.g,P.g,P.w,P.g,P.g,P.g,P.g,P.g2,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.bk,P.bk,P.skin,P.skin,P.bk,P.bk,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin2,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_,_],
-    [_,P.skin,P.skin,P.g,P.g,P.g,P.g,P.g,P.g,P.skin,P.skin,_,_,_,_,_],
-    [P.w,P.w,P.g,P.g,P.g2,P.g,P.g,P.g2,P.g,P.w,P.w,_,_,P.w,P.w,_],
-    [_,P.skin,P.g,P.g,P.g,P.w,P.w,P.g,P.g,P.skin,_,_,_,P.w,P.w,_],
-    [_,_,P.dk,P.dk,P.g,P.y,P.g,P.dk,P.dk,_,_,_,_,_,_,_],
-    [_,_,P.dk,P.gr,P.gr,_,_,P.gr,P.gr,P.dk,_,_,_,_,_,_],
-    [_,_,P.dk,P.gr,_,_,_,_,P.gr,P.dk,_,_,_,_,_,_],
-    [_,_,P.dk,P.y,P.y,_,_,P.dk,P.y,P.y,_,_,_,_,_,_],
-    [_,_,P.gr,P.y,P.y,_,_,P.gr,P.y,P.y,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
-  distributor: [
-    [_,_,_,P.br,P.br,P.br,P.br,P.br,P.br,P.br,_,_,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.dk,P.dk,P.dk,P.gr,P.gr,P.dk,P.dk,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin2,P.skin,P.skin,P.skin2,P.skin,P.skin,_,_,_,_,_,_],
-    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
-    [_,P.skin,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,P.skin,_,_,_,_,_],
-    [P.w,P.w,P.y2,P.y2,P.y3,P.y2,P.y2,P.y3,P.y2,P.w,P.w,_,_,_,_,_],
-    [_,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,_,_,_,_,_,_],
-    [_,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,_,_,_,_,_,_],
-    [_,_,P.dk,P.dk,P.y2,P.gd,P.y2,P.dk,P.dk,_,_,_,_,_,_,_],
-    [_,_,P.b3,P.b3,P.gr,_,_,P.gr,P.b3,P.b3,_,_,_,_,_,_],
-    [_,_,P.b3,P.b3,_,_,_,_,P.b3,P.b3,_,_,_,_,_,_],
-    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
-    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
-  manufacturer: [
-    [_,_,_,P.r3,P.r3,P.r3,P.r3,P.r3,P.r3,P.r3,_,_,_,_,_,_],
-    [_,_,P.r2,P.r,P.r,P.r,P.r,P.r,P.r,P.r,P.r2,_,_,_,_,_],
-    [_,P.r2,P.r,P.r,P.r,P.r,P.w,P.r,P.r,P.r,P.r,P.r2,_,_,_,_],
-    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.bk,P.skin,P.skin,P.skin,P.skin,P.bk,P.skin,P.skin,_,_,_,_,_],
-    [_,_,P.skin,P.br,P.br,P.br,P.br,P.br,P.br,P.skin,_,_,_,_,_,_],
-    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
-    [_,P.skin,P.skin,P.r,P.r,P.r,P.r,P.r,P.r,P.skin,P.skin,_,_,_,_,_],
-    [P.gr,P.skin,P.r,P.r,P.r2,P.r,P.r,P.r2,P.r,P.skin,P.gr,_,_,_,_,_],
-    [_,P.skin,P.r,P.r,P.r,P.w,P.w,P.r,P.r,P.skin,_,_,_,_,_,_],
-    [_,_,P.dk,P.dk,P.r,P.gd,P.r,P.dk,P.dk,_,_,_,_,_,_,_],
-    [_,_,P.r3,P.r3,P.r3,_,_,P.r3,P.r3,P.r3,_,_,_,_,_,_],
-    [_,_,P.r3,P.r3,_,_,_,_,P.r3,P.r3,_,_,_,_,_,_],
-    [_,_,P.dk,P.dk,P.gr,_,_,P.dk,P.dk,P.gr,_,_,_,_,_,_],
-    [_,_,P.dk,P.gr,P.gr,_,_,P.dk,P.gr,P.gr,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  manufacturer:[
+    [_,_,_,_,K.rd3,K.rd3,K.rd3,K.rd3,K.rd3,K.rd3,_,_,_,_,_,_],
+    [_,_,_,K.rd2,K.rd,K.rd,K.rd,K.rd,K.rd,K.rd,K.rd2,_,_,_,_,_],
+    [_,_,K.rd2,K.rd,K.rd,K.rd,K.wh,K.rd,K.rd,K.rd,K.rd,K.rd2,_,_,_,_],
+    [_,_,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,K.rd2,_,_,_,_],
+    [_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.bk,K.sk,K.sk,K.sk,K.sk,K.bk,K.sk,K.sk,K.sk,_,_,_,_],
+    [_,_,K.sk,K.br,K.br,K.br,K.br,K.br,K.br,K.sk,_,_,_,_,_,_],
+    [_,_,_,K.sk,K.sk,K.sk,K.sk,K.sk,K.sk,_,_,_,_,_,_,_],
+    [_,K.sk,K.sk,K.rd,K.rd,K.rd,K.rd,K.rd,K.rd,K.sk,K.sk,_,_,_,_,_],
+    [K.gy,K.sk,K.rd,K.rd,K.rd2,K.rd,K.rd,K.rd2,K.rd,K.sk,K.gy,_,_,_,_,_],
+    [_,K.sk,K.rd,K.rd,K.rd,K.wh,K.wh,K.rd,K.rd,K.sk,_,_,_,_,_,_],
+    [_,_,K.dk,K.dk,K.rd,K.gd,K.rd,K.dk,K.dk,_,_,_,_,_,_,_],
+    [_,_,K.rd3,K.rd3,K.rd3,_,_,K.rd3,K.rd3,K.rd3,_,_,_,_,_,_],
+    [_,_,K.rd3,K.rd3,_,_,_,_,K.rd3,K.rd3,_,_,_,_,_,_],
+    [_,_,K.dk,K.dk,K.gy,_,_,K.dk,K.dk,K.gy,_,_,_,_,_,_],
+    [_,_,K.dk,K.gy,K.gy,_,_,K.dk,K.gy,K.gy,_,_,_,_,_,_],
   ],
 }
+// Beer mug title art
+const MUG_ART=[
+  [_,_,_,K.gy,K.gy,K.gy,K.gy,K.gy,_,_,_,_],
+  [_,_,K.gy,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.gy,K.gy,_,_],
+  [_,K.gy,K.yl2,K.wh,K.wh,K.yl,K.yl,K.yl,K.yl2,K.gy,K.gy,_],
+  [_,K.gy,K.yl2,K.wh,K.wh,K.yl,K.yl,K.yl,K.yl2,K.gy,K.yl,K.gy],
+  [_,K.gy,K.yl2,K.yl,K.yl,K.yl,K.yl,K.yl,K.yl2,K.gy,K.yl,K.gy],
+  [_,K.gy,K.yl2,K.yl,K.yl,K.yl,K.yl,K.yl,K.yl2,K.gy,K.yl,K.gy],
+  [_,K.gy,K.yl2,K.yl,K.yl,K.yl,K.yl,K.yl,K.yl2,K.gy,_,_],
+  [_,_,K.gy,K.yl2,K.yl2,K.yl2,K.yl2,K.yl2,K.gy,_,_,_],
+  [_,_,_,K.gy,K.gy,K.gy,K.gy,K.gy,_,_,_,_],
+]
 
-function drawSprite(canvasId, role, scale=1) {
-  const c = document.getElementById(canvasId)
-  if (!c) return
-  const ctx = c.getContext('2d')
-  ctx.clearRect(0, 0, c.width, c.height)
-  const data = SPRITES[role]
-  if (!data) return
-  const pw = c.width / 16
-  const ph = c.height / 16
-  for (let r=0; r<16; r++) {
-    for (let col=0; col<16; col++) {
-      const color = data[r]?.[col]
-      if (color) {
-        ctx.fillStyle = color
-        ctx.fillRect(col*pw, r*ph, pw, ph)
-      }
-    }
+function drawSpr(id,role,W=64,H=80){
+  const c=document.getElementById(id);if(!c)return
+  const ctx=c.getContext('2d'),pw=W/16,ph=H/16
+  ctx.clearRect(0,0,W,H)
+  const d=SPR[role];if(!d)return
+  for(let r=0;r<16;r++)for(let col=0;col<16;col++){
+    const color=d[r]?.[col];if(color){ctx.fillStyle=color;ctx.fillRect(col*pw,r*ph,pw,ph)}
+  }
+}
+function drawMug(id){
+  const c=document.getElementById(id);if(!c)return
+  const ctx=c.getContext('2d'),pw=c.width/12,ph=c.height/9
+  ctx.clearRect(0,0,c.width,c.height)
+  for(let r=0;r<9;r++)for(let col=0;col<12;col++){
+    const color=MUG_ART[r]?.[col];if(color){ctx.fillStyle=color;ctx.fillRect(col*pw,r*ph,pw,ph)}
   }
 }
 
-// ── 角色設定 ──────────────────────────────────────────────────────
-const ROLES = ['retailer','wholesaler','distributor','manufacturer']
-const ROLE_CFG = {
-  retailer: {
-    name:'零售商', emoji:'🏪', color:'var(--blue)',
-    title:'超市店長・直面消費者',
-    mission:'你經營一家啤酒超市。消費者每週來買啤酒，你要確保貨架有貨。\n沒貨 = 客人流失（缺貨成本高）\n太多 = 倉儲費用（庫存成本）\n你每週向批發商下單，2週後才到貨。',
-    canSee:['自己的庫存','消費者本週需求','積壓訂單','在途貨物'],
-    cantSee:['批發商庫存','任何上游資訊','未來需求'],
-    victory:'總成本最低，且缺貨週數為零',
-    victoryColor:'var(--blue)', threshold:150,
-    tip:'前4週需求穩定約4箱。第5週需求會跳升，提早備貨！',
-    orderLabel:'你要向批發商下幾箱？',
-    demandLabel:'消費者需求',
-    hints:{5:'⚠️ 消費者需求跳升了！快調整安全庫存。',10:'你的下單量是否遠超實際需求？',16:'遊戲快結束，多餘庫存仍要付成本。'},
-  },
-  wholesaler: {
-    name:'批發商', emoji:'📦', color:'var(--green)',
-    title:'倉儲經理・中間供應商',
-    mission:'你管理一座批發倉庫，服務零售商。\n收到零售商訂單後出貨，庫存不足則積壓。\n你向分銷商補貨，同樣2週才到。\n你看不到零售商的庫存，也不知道消費者真實需求。',
-    canSee:['自己的庫存','零售商本週訂單量','積壓訂單','在途貨物'],
-    cantSee:['零售商的庫存','消費者真實需求','分銷商庫存'],
-    victory:'總成本最低，對零售商滿足率≥95%',
-    victoryColor:'var(--green)', threshold:200,
-    tip:'零售商訂單 ≠ 消費者真實需求。他們可能在恐慌性過度下單，別跟著被帶跑！',
-    orderLabel:'你要向分銷商下幾箱？',
-    demandLabel:'零售商訂單',
-    hints:{5:'零售商大量下單？先觀察，別立刻暴增補貨。',8:'你的訂單是零售商的幾倍？這就是牛鞭效應！',15:'庫存過多？可以減少下單，消化在途的貨。'},
-  },
-  distributor: {
-    name:'分銷商', emoji:'🚛', color:'var(--yellow)',
-    title:'配送中心・物流樞紐',
-    mission:'你管理一個區域配送中心，連結工廠與批發商。\n你的訂單已經過兩層轉手，波動被放大了。\n向製造商下單，2週後到貨。\n完全不知道零售商或消費者的狀況。',
-    canSee:['自己的庫存','批發商本週訂單量','積壓訂單','在途貨物'],
-    cantSee:['批發商庫存','零售商資訊','消費者需求'],
-    victory:'總成本最低，訂單波動比批發商小',
-    victoryColor:'var(--yellow)', threshold:250,
-    tip:'嘗試「平滑」你的下單量，而非跟著批發商的波動走。設定目標庫存水位來決策！',
-    orderLabel:'你要向製造商下幾箱？',
-    demandLabel:'批發商訂單',
-    hints:{5:'批發商訂單波動？設定目標庫存，用公式下單。',10:'你能比批發商更平穩嗎？你是穩定器！',15:'最後五週，維持穩定節奏。'},
-  },
-  manufacturer: {
-    name:'製造商', emoji:'🏭', color:'var(--red)',
-    title:'工廠廠長・供應鏈源頭',
-    mission:'你是啤酒工廠的生產經理。\n你不向上游訂貨，而是決定每週「生產多少箱」。\n生產指令下達後，2週後完工入庫。\n你是整條供應鏈的源頭，但看不到任何下游狀況。',
-    canSee:['成品庫存','分銷商本週訂單量','生產線上的數量','積壓訂單'],
-    cantSee:['分銷商庫存','更下游的一切','消費者需求'],
-    victory:'總成本最低，生產量變動最小',
-    victoryColor:'var(--red)', threshold:300,
-    tip:'牛鞭效應在你這裡感受最強烈。維持平穩生產比大增大減更有效！',
-    orderLabel:'你要生產幾箱？',
-    demandLabel:'分銷商訂單',
-    hints:{5:'分銷商訂單跳了？先看：你手上有多少庫存和在產的貨？',10:'生產量是否剧烈波動？平穩生產是關鍵。',15:'快結束了，大量增產會在第20週變成高庫存成本。'},
-  },
-}
+// ══════════════════════════════════════════════
+// DEMAND CURVE GENERATOR
+// 週期性隨機需求：base sine wave + harmonics + noise
+// 每局不同，但有自然的季節感
+// ══════════════════════════════════════════════
+function generateDemand(){
+  // 用時間戳作種子，確保每局不同
+  let seed=Date.now()%999983
+  const lcg=()=>{seed=(seed*1664525+1013904223)&0x7fffffff;return seed/0x7fffffff}
+  const rnd=(a,b)=>a+(b-a)*lcg()
+  const rndInt=(a,b)=>Math.floor(rnd(a,b+0.999))
 
-const MODE_LABELS = {
-  summer:'☀️ 夏季旺季型',winter:'❄️ 冬季旺季型',bimodal:'📈 雙峰型',shock:'⚡ 突發衝擊型'
-}
-const MODE_DESCS = {
-  summer:'第6-14週進入需求高峰，旺季結束後回落。考驗你的提前備貨能力。',
-  winter:'第12週起需求持續走高，越到後期壓力越大。',
-  bimodal:'兩次需求高峰（第4-7週與第14-17週），中間有低谷，考驗庫存調配。',
-  shock:'某一週需求突然暴增，之後迅速回落，考驗應變能力。'
-}
+  // 隨機選擇波形參數
+  const base    = rnd(3.5, 5.5)        // 基礎需求均值
+  const amp1    = rnd(1.5, 4.0)        // 主週期振幅
+  const period1 = rnd(6, 12)           // 主週期（週）
+  const phase1  = rnd(0, 2*Math.PI)    // 主週期相位
+  const amp2    = rnd(0.5, 2.0)        // 次週期振幅
+  const period2 = rnd(3, 6)            // 次週期
+  const phase2  = rnd(0, 2*Math.PI)    // 次週期相位
+  const trend   = rnd(-0.08, 0.12)     // 長期趨勢（輕微上升/下降）
+  const noiseAmp= rnd(0.3, 1.0)        // 隨機噪音大小
 
-function genDemand() {
-  let s = Math.floor(Math.random()*99999)
-  const rand=()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff}
-  const ri=(a,b)=>Math.floor(rand()*(b-a+1))+a
-  const modes=['summer','winter','bimodal','shock']
-  const mode=modes[Math.floor(rand()*modes.length)]
-  const base=ri(3,5), peak=ri(8,14)
+  // 隨機「衝擊事件」（0-2個）
+  const shockCount = rndInt(0, 2)
+  const shocks = []
+  for(let i=0;i<shockCount;i++){
+    shocks.push({wk:rndInt(4,17), mag:rnd(3,8), sign:lcg()>0.5?1:-1})
+  }
+
   const curve=[]
   for(let w=1;w<=20;w++){
-    let d=base
-    if(mode==='summer'){if(w>=6&&w<=14)d=peak}
-    else if(mode==='winter'){if(w>=12)d=peak}
-    else if(mode==='bimodal'){if((w>=4&&w<=7)||(w>=14&&w<=17))d=peak}
-    else if(mode==='shock'){const sw=ri(5,12);if(w===sw)d=peak+ri(4,8);else if(w===sw+1)d=Math.floor(peak*0.6)}
-    curve.push(Math.max(1,d+ri(-1,1)))
+    const t = w-1
+    let d = base
+    d += amp1 * Math.sin(2*Math.PI*t/period1 + phase1)
+    d += amp2 * Math.sin(2*Math.PI*t/period2 + phase2)
+    d += trend * t
+    // 白噪音
+    d += noiseAmp * (lcg()*2-1)
+    // 衝擊
+    for(const sh of shocks){
+      const dist=Math.abs(w-sh.wk)
+      if(dist<=1) d+=sh.sign*sh.mag*(1-dist*0.5)
+    }
+    curve.push(Math.max(1, Math.round(d)))
   }
-  return{curve,mode,base,peak}
+
+  // 判斷模式（給複盤用）
+  const avg=curve.reduce((a,b)=>a+b,0)/curve.length
+  const maxW=curve.indexOf(Math.max(...curve))+1
+  const minW=curve.indexOf(Math.min(...curve))+1
+  let mode,modeDesc
+  if(maxW>=6&&maxW<=14&&minW<5){
+    mode='☀️ 夏季旺季型'
+    modeDesc='前段穩定，中段（第6-14週）衝高，尾段回落'
+  }else if(maxW>=12){
+    mode='❄️ 冬季旺季型'
+    modeDesc='需求逐步走高，後半段達到高峰'
+  }else if(shocks.length>=2){
+    mode='⚡ 雙重衝擊型'
+    modeDesc='出現兩次突發需求衝擊，考驗應變能力'
+  }else if(shockCount>0){
+    mode='💥 突發衝擊型'
+    modeDesc='出現一次需求暴增，之後迅速回落'
+  }else{
+    mode='📈 波動週期型'
+    modeDesc='需求呈現自然波動週期，有漲有跌'
+  }
+
+  return{curve, mode, modeDesc,
+    base:Math.round(Math.min(...curve)),
+    peak:Math.round(Math.max(...curve)),
+    params:{base,amp1,period1,trend,shockCount}}
 }
 
-function initState(demandData){
+// ══════════════════════════════════════════════
+// GAME ENGINE
+// ══════════════════════════════════════════════
+const ROLES=['retailer','wholesaler','distributor','manufacturer']
+const RCFG={
+  retailer:{
+    name:'零售商',emoji:'🏪',color:'var(--blue)',
+    title:'超市店長・直面消費者',
+    mission:'你的超市直接服務消費者，需求天天變化。\n下單後 2 週才到貨，預判很重要！',
+    see:['自己的庫存','消費者本週需求','積壓訂單','在途貨物'],
+    blind:['批發商庫存','任何上游資訊','未來需求'],
+    win:'總成本最低，且缺貨週數為零',threshold:150,
+    tip:'注意觀察需求趨勢，需求上升時要提前補貨。',
+    qlabel:'向批發商下幾箱？',dlabel:'消費者需求',
+    hints:{5:'⚠️ 需求出現變化！考慮調整庫存水位。',10:'你的訂單量是否遠超實際需求？',16:'遊戲快結束，多餘庫存仍要付成本。'},
+  },
+  wholesaler:{
+    name:'批發商',emoji:'📦',color:'var(--grn)',
+    title:'倉儲經理・中間供應商',
+    mission:'你服務零售商，但看不到消費者真實需求。\n零售商的訂單可能已被放大，小心跟風！',
+    see:['自己的庫存','零售商本週訂單','積壓訂單','在途貨物'],
+    blind:['零售商庫存','消費者真實需求','分銷商庫存'],
+    win:'總成本最低，對零售商滿足率≥95%',threshold:200,
+    tip:'零售商訂單 ≠ 消費者需求。別被「假需求」帶跑！',
+    qlabel:'向分銷商下幾箱？',dlabel:'零售商訂單',
+    hints:{5:'零售商大量下單？先觀察一週再反應。',8:'牛鞭效應正在發生！你的訂單是消費者需求的幾倍？',15:'庫存過多？減少下單，消化在途的貨。'},
+  },
+  distributor:{
+    name:'分銷商',emoji:'🚛',color:'var(--yel)',
+    title:'物流配送・連結工廠與批發商',
+    mission:'你的訂單已經過兩層放大，波動更大。\n嘗試平滑你的下單，成為供應鏈的穩定器！',
+    see:['自己的庫存','批發商本週訂單','積壓訂單','在途貨物'],
+    blind:['批發商庫存','零售商資訊','消費者需求'],
+    win:'總成本最低，訂單波動比批發商小',threshold:250,
+    tip:'設定目標庫存，用「目標-現有-在途+積壓」算出下單量。',
+    qlabel:'向製造商下幾箱？',dlabel:'批發商訂單',
+    hints:{5:'批發商訂單波動了？冷靜！不要直接照抄。',10:'你的訂單是否比批發商更平穩？你是穩定器！',15:'最後五週，維持節奏，別亂動。'},
+  },
+  manufacturer:{
+    name:'製造商',emoji:'🏭',color:'var(--red)',
+    title:'工廠廠長・供應鏈源頭',
+    mission:'你不訂貨，你決定生產多少。\n你是牛鞭效應的最終承受者，平穩生產是王道！',
+    see:['成品庫存','分銷商本週訂單','生產線數量','積壓訂單'],
+    blind:['分銷商庫存','下游一切資訊','消費者需求'],
+    win:'總成本最低，生產量變動最小',threshold:300,
+    tip:'維持平穩生產比情緒化大增大減更有效率！',
+    qlabel:'本週生產幾箱？',dlabel:'分銷商訂單',
+    hints:{5:'分銷商訂單跳了？先算：庫存+在產=多少？夠嗎？',10:'你的生產量是否大起大落？這就是放大的牛鞭效應。',15:'快結束了，大量增產會在第20週變成高庫存。'},
+  },
+}
+
+function initState(dem){
   const roles={}
-  for(const r of ROLES) roles[r]={inventory:12,backlog:0,pipeline:[4,4],cost:0,history:[]}
-  return{week:1,roles,status:'active',...demandData}
+  for(const r of ROLES)roles[r]={inventory:12,backlog:0,pipeline:[4,4],cost:0,history:[]}
+  return{week:1,roles,status:'active',...dem}
 }
-
 function processWeek(state,orders){
-  const week=state.week,cd=state.curve[week-1],newRoles={},snap={}
+  const wk=state.week,cd=state.curve[wk-1],nr={},snap={}
   const recv={};for(const r of ROLES)recv[r]=state.roles[r].pipeline[0]
   const inv={};for(const r of ROLES)inv[r]=state.roles[r].inventory+recv[r]
   const inc={retailer:cd,wholesaler:orders.retailer,distributor:orders.wholesaler,manufacturer:orders.distributor}
@@ -670,362 +652,337 @@ function processWeek(state,orders){
   const sh={},bl={},ia={}
   for(const r of ROLES){sh[r]=Math.min(inv[r],td[r]);ia[r]=inv[r]-sh[r];bl[r]=td[r]-sh[r]}
   for(const r of ROLES){
-    const hc=ia[r]*0.5,sc=bl[r]*1.0,wc=hc+sc,nc=state.roles[r].cost+wc
-    snap[r]={week,received:recv[r],demand:inc[r],inventory:ia[r],backlog:bl[r],order:orders[r],hc,sc,wc,cost:nc}
-    newRoles[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],cost:nc,history:[...state.roles[r].history,snap[r]]}
+    const hc=ia[r]*.5,sc=bl[r]*1,wc=hc+sc,nc=state.roles[r].cost+wc
+    snap[r]={wk,recv:recv[r],dem:inc[r],inv:ia[r],bl:bl[r],ord:orders[r],hc,sc,wc,cost:nc}
+    nr[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],cost:nc,history:[...state.roles[r].history,snap[r]]}
   }
-  return{newState:{...state,week:week+1,roles:newRoles,status:week>=20?'finished':'active'},snap,cd}
+  return{ns:{...state,week:wk+1,roles:nr,status:wk>=20?'done':'active'},snap,cd}
 }
-
-function autoOrder(role,state){
+function auto(role,state){
   const rs=state.roles[role],it=rs.pipeline[0]+rs.pipeline[1]
+  // 簡單策略：目標庫存14箱
   return Math.max(0,Math.round(14-rs.inventory-it+rs.backlog))
 }
 
-// ── 狀態 ─────────────────────────────────────────────────────────
-let gameState=null,activeRole=null,lastSnap=null
-let timerInt=null,timeLeft=60
-let histInv=[],histOrd=[],histCost=[]
-let hiScores=JSON.parse(localStorage.getItem('beerHi2')||'[]')
+// ══════════════════════════════════════════════
+// UI STATE
+// ══════════════════════════════════════════════
+let GS=null,ROLE=null,SNAP=null
+let hInv=[],hOrd=[],hCst=[]
+let timerID=null,tLeft=60
+let HI=JSON.parse(localStorage.getItem('bgh3')||'[]')
 
-// ── 畫面切換 ─────────────────────────────────────────────────────
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))
-  document.getElementById('screen-'+id).classList.add('active')
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'))
+  document.getElementById('s-'+id).classList.add('on')
   window.scrollTo(0,0)
 }
+function goHome(){clearInterval(timerID);show('home')}
 
-// ── 首頁 ─────────────────────────────────────────────────────────
+// ── HOME ──────────────────────────────────────
 function initHome(){
+  drawMug('c-title-art')
   const list=document.getElementById('role-list')
   list.innerHTML=''
-  ROLES.forEach(role=>{
-    const cfg=ROLE_CFG[role]
+  ROLES.forEach(r=>{
+    const cfg=RCFG[r]
     const div=document.createElement('div')
-    div.className='card role-card slide-in'
-    div.style.cssText=`border-color:${cfg.color.replace('var(--','').replace(')','')};border-left:4px solid`
-    div.style.borderLeftColor=cfg.color
+    div.className='role-row'
     div.innerHTML=`
-      <canvas id="home-spr-${role}" width="40" height="48" style="width:40px;height:48px;image-rendering:pixelated;flex-shrink:0" class="float"></canvas>
+      <canvas id="hs-${r}" width="32" height="40" style="width:32px;height:40px;flex-shrink:0" class="float"></canvas>
       <div style="flex:1">
-        <div style="font-size:0.95rem;font-weight:900;color:${cfg.color}">${cfg.emoji} ${cfg.name}</div>
-        <div style="font-size:0.68rem;color:var(--dim);margin-top:2px">${cfg.title}</div>
-        <div style="font-size:0.65rem;color:var(--dim);margin-top:4px">目標成本 &lt;$${cfg.threshold}</div>
+        <div class="t-sm" style="color:${cfg.color}">${cfg.emoji} ${cfg.name}</div>
+        <div class="t-xs" style="color:var(--c2);margin-top:3px;line-height:1.6">${cfg.title}</div>
       </div>
-      <div style="font-size:1.2rem;color:var(--dim)">▶</div>
+      <div class="t-xs" style="color:var(--c2)">&lt;$${cfg.threshold}</div>
     `
-    div.onclick=()=>showRoleCard(role)
+    div.onclick=()=>showRole(r)
     list.appendChild(div)
-    setTimeout(()=>drawSprite('home-spr-'+role, role), 50)
+    setTimeout(()=>drawSpr('hs-'+r,r,32,40),30)
   })
-
-  // 最高紀錄
-  const el=document.getElementById('hiscore-list')
-  if(hiScores.length===0){el.innerHTML='<span style="color:var(--dim)">尚無紀錄，快來創下第一筆！</span>';return}
-  el.innerHTML=hiScores.slice(0,5).map((s,i)=>`
-    <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
-      <span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${ROLE_CFG[s.role]?.name||s.role}</span>
-      <span style="color:${s.cost<ROLE_CFG[s.role]?.threshold?'var(--green)':'var(--red)'}">$${s.cost.toFixed(1)}</span>
+  // hiscore
+  const el=document.getElementById('hiscore')
+  if(!HI.length){el.innerHTML='<span style="color:var(--c2)">尚無紀錄，快來挑戰！</span>';return}
+  el.innerHTML=HI.slice(0,5).map((h,i)=>`
+    <div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px solid var(--b1)">
+      <span>${['🥇','🥈','🥉','4.','5.'][i]} ${RCFG[h.r]?.name||h.r}</span>
+      <span style="color:${h.c<(RCFG[h.r]?.threshold||999)?'var(--grn)':'var(--red)'}">$${h.c.toFixed(1)}</span>
     </div>
   `).join('')
 }
 
-// ── 角色介紹 ─────────────────────────────────────────────────────
-function showRoleCard(role){
-  activeRole=role
-  const cfg=ROLE_CFG[role]
-
+// ── ROLE CARD ─────────────────────────────────
+function showRole(role){
+  ROLE=role
+  const cfg=RCFG[role]
   document.getElementById('rc-name').textContent=`${cfg.emoji} ${cfg.name}`
   document.getElementById('rc-name').style.color=cfg.color
   document.getElementById('rc-title').textContent=cfg.title
   document.getElementById('rc-mission').textContent=cfg.mission
-  document.getElementById('rc-cansee').innerHTML=cfg.canSee.map(s=>`<div>✓ ${s}</div>`).join('')
-  document.getElementById('rc-cantsee').innerHTML=cfg.cantSee.map(s=>`<div>✗ ${s}</div>`).join('')
-  document.getElementById('rc-victory').textContent=cfg.victory
-  document.getElementById('rc-victory').style.color=cfg.victoryColor
+  document.getElementById('rc-see').innerHTML=cfg.see.map(s=>`<div>✓ ${s}</div>`).join('')
+  document.getElementById('rc-blind').innerHTML=cfg.blind.map(s=>`<div>✗ ${s}</div>`).join('')
+  document.getElementById('rc-win').textContent=cfg.win
+  document.getElementById('rc-win').style.color=cfg.color
   document.getElementById('rc-tip').textContent=cfg.tip
-  document.getElementById('rc-start-btn').style.borderColor=cfg.color
-  document.getElementById('rc-start-btn').style.color=cfg.color
-
-  const canvas=document.getElementById('rc-sprite')
-  setTimeout(()=>drawSprite('rc-sprite',role),50)
-
-  showScreen('rolecard')
+  document.getElementById('rc-go').style.borderColor=cfg.color
+  document.getElementById('rc-go').style.color=cfg.color
+  setTimeout(()=>drawSpr('rc-sprite',role,64,80),30)
+  show('role')
 }
 
-// ── 進入遊戲 ─────────────────────────────────────────────────────
+// ── GAME START ────────────────────────────────
 function enterGame(){
-  const demand=genDemand()
-  gameState=initState(demand)
-  lastSnap=null
-  histInv=[];histOrd=[];histCost=[]
-
-  const cfg=ROLE_CFG[activeRole]
+  const dem=generateDemand()
+  GS=initState(dem);SNAP=null
+  hInv=[];hOrd=[];hCst=[]
+  const cfg=RCFG[ROLE]
   document.getElementById('hud-role').textContent=`${cfg.emoji} ${cfg.name}`
   document.getElementById('hud-role').style.color=cfg.color
-  document.getElementById('action-title').textContent=`📦 ${cfg.orderLabel}`
-  document.getElementById('g-demand-label').textContent=cfg.demandLabel
-
-  setTimeout(()=>drawSprite('g-sprite-small',activeRole),50)
-  updateGameUI()
-  showScreen('game')
+  document.getElementById('g-azq').textContent=cfg.qlabel
+  document.getElementById('g-dlabel').textContent=cfg.dlabel
+  setTimeout(()=>drawSpr('g-spr',ROLE,40,48),30)
+  refreshUI()
+  show('game')
   startTimer()
 }
 
-// ── 計時器 ───────────────────────────────────────────────────────
+// ── TIMER ─────────────────────────────────────
 function startTimer(){
-  clearInterval(timerInt)
-  timeLeft=60
+  clearInterval(timerID);tLeft=60
   const el=document.getElementById('hud-timer')
   el.classList.add('blink')
-  timerInt=setInterval(()=>{
-    timeLeft--
-    el.textContent=timeLeft
-    el.style.color=timeLeft<=10?'var(--red)':timeLeft<=20?'var(--yellow)':'var(--gold)'
-    if(timeLeft<=0){clearInterval(timerInt);const h=gameState.roles[activeRole].history;doSubmit(h.length>0?h[h.length-1].order:4)}
+  el.style.color='var(--gold)'
+  // animate progress bar
+  const prog=document.getElementById('prog')
+  prog.style.transition='none';prog.style.width='100%'
+  setTimeout(()=>{prog.style.transition=`width ${60}s linear`;prog.style.width='0%'},50)
+  timerID=setInterval(()=>{
+    tLeft--
+    el.textContent=tLeft
+    el.style.color=tLeft<=10?'var(--red)':tLeft<=20?'var(--yel)':'var(--gold)'
+    if(tLeft<=0){
+      clearInterval(timerID)
+      const h=GS.roles[ROLE].history
+      doSubmit(h.length?h[h.length-1].ord:4)
+    }
   },1000)
 }
 
-// ── 更新畫面 ─────────────────────────────────────────────────────
-function updateGameUI(){
-  const rs=gameState.roles[activeRole]
-  const week=gameState.week
-  const cfg=ROLE_CFG[activeRole]
-
-  // HUD
-  document.getElementById('hud-week-label').textContent=`第 ${week} 週 / 共 20 週`
+// ── REFRESH UI ────────────────────────────────
+function refreshUI(){
+  const rs=GS.roles[ROLE],wk=GS.week,cfg=RCFG[ROLE]
+  document.getElementById('hud-wk').textContent=`第 ${wk} 週 / 共 20 週`
   document.getElementById('hud-cost').textContent=`$${rs.cost.toFixed(1)}`
-  document.getElementById('hud-timer').textContent=timeLeft
 
-  // 狀態
-  const inv=document.getElementById('g-inv')
-  inv.textContent=rs.inventory
-  inv.style.color=rs.inventory===0?'var(--red)':rs.inventory<5?'var(--yellow)':'var(--green)'
+  // 三大數字
+  const invEl=document.getElementById('g-inv')
+  invEl.textContent=rs.inventory
+  invEl.style.color=rs.inventory===0?'var(--red)':rs.inventory<4?'var(--yel)':'var(--grn)'
 
-  document.getElementById('g-back').textContent=`${rs.backlog} 箱`
-  document.getElementById('g-back').style.color=rs.backlog>0?'var(--red)':'var(--dim)'
-  document.getElementById('g-pipe').textContent=`${rs.pipeline[0]+rs.pipeline[1]} 箱`
-
-  // 本週到貨 & 需求（從上週結算取得）
-  if(lastSnap){
-    const s=lastSnap[activeRole]
-    document.getElementById('g-recv').textContent=`+${s.received}`
-    document.getElementById('g-recv').style.color=s.received>0?'var(--blue)':'var(--dim)'
-    document.getElementById('g-demand').textContent=s.demand
-    // 成本小結
-    document.getElementById('g-cost-detail').style.display='block'
+  if(SNAP){
+    const s=SNAP[ROLE]
+    document.getElementById('g-recv').textContent=s.recv
+    document.getElementById('g-recv').style.color=s.recv>0?'var(--blue)':'var(--c2)'
+    document.getElementById('g-dem').textContent=s.dem
+    document.getElementById('g-costbox').style.display='block'
     document.getElementById('g-hc').textContent=`$${s.hc.toFixed(2)}`
     document.getElementById('g-sc').textContent=`$${s.sc.toFixed(2)}`
     document.getElementById('g-wc').textContent=`$${s.wc.toFixed(2)}`
-  } else {
+  }else{
     document.getElementById('g-recv').textContent='—'
-    document.getElementById('g-demand').textContent='—'
+    document.getElementById('g-dem').textContent='—'
+    document.getElementById('g-costbox').style.display='none'
   }
+  document.getElementById('g-back').textContent=`${rs.backlog} 箱`
+  document.getElementById('g-back').style.color=rs.backlog>0?'var(--red)':'var(--c2)'
+  document.getElementById('g-pipe').textContent=`${rs.pipeline[0]+rs.pipeline[1]} 箱`
 
-  // 快速選鈕（上週 / 建議 / 0）
-  const lastOrd=rs.history.length>0?rs.history[rs.history-1]?.order:null
-  const suggested=Math.max(0,Math.round(12-rs.inventory-(rs.pipeline[0]+rs.pipeline[1])+rs.backlog+4))
-  const quickEl=document.getElementById('quick-btns')
-  quickEl.innerHTML=''
-  const btns=[
-    {label:`建議 ${suggested}箱`,val:suggested,style:'color:var(--green);border-color:var(--green)'},
-    {label:`維持 4箱`,val:4,style:'color:var(--dim);border-color:var(--border)'},
-    {label:`0箱`,val:0,style:'color:var(--red);border-color:var(--red)'},
-  ]
-  btns.forEach(b=>{
+  // 星星
+  const cost=rs.cost,thr=cfg.threshold
+  const stars=cost<thr*.5?'★★★':cost<thr?'★★☆':cost<thr*1.5?'★☆☆':'☆☆☆'
+  document.getElementById('g-stars').textContent=stars
+
+  // 快速選鈕
+  const sug=Math.max(0,Math.round(12-rs.inventory-(rs.pipeline[0]+rs.pipeline[1])+rs.backlog+(GS.curve[wk-1]||4)))
+  const qEl=document.getElementById('g-quick')
+  qEl.innerHTML=''
+  ;[{l:`建議 ${sug}箱`,v:sug,cls:'pbtn-g'},{l:'維持 4箱',v:4,cls:'pbtn-b'},{l:'0箱',v:0,cls:'pbtn-r'}]
+  .forEach(b=>{
     const btn=document.createElement('button')
-    btn.style.cssText=`font-family:inherit;font-size:0.7rem;padding:6px 10px;border:1.5px solid;background:var(--panel);cursor:pointer;${b.style}`
-    btn.textContent=b.label
-    btn.onclick=()=>{document.getElementById('order-input').value=b.val;document.getElementById('order-input').focus()}
-    quickEl.appendChild(btn)
+    btn.className=`pbtn ${b.cls}`
+    btn.style.fontSize='7px';btn.style.padding='5px 8px'
+    btn.textContent=b.l
+    btn.onclick=()=>{document.getElementById('g-input').value=b.v;document.getElementById('g-input').focus()}
+    qEl.appendChild(btn)
   })
 
   // 提示
-  const hint=cfg.hints[week]
-  const hintBox=document.getElementById('g-hint')
-  if(hint){hintBox.style.display='block';document.getElementById('g-hint-text').textContent='💡 '+hint}
-  else hintBox.style.display='none'
+  const hint=cfg.hints[wk]
+  const hEl=document.getElementById('g-hint')
+  if(hint){hEl.style.display='block';document.getElementById('g-hinttext').textContent='💡 '+hint}
+  else hEl.style.display='none'
 
   // 圖表
-  renderChart('chart-inv', histInv, '#4fc3f7')
-  renderChart('chart-ord', histOrd, '#fbbf24')
-  renderChart('chart-cost', histCost, '#f87171')
-
-  if(histInv.length>0){
-    document.getElementById('chart-inv-now').textContent=histInv[histInv.length-1]+'箱'
-    document.getElementById('chart-ord-now').textContent=histOrd[histOrd.length-1]+'箱'
-    document.getElementById('chart-cost-now').textContent='$'+histCost[histCost.length-1]?.toFixed(1)
+  renderChart('ch-inv',hInv,'#38bdf8',60)
+  renderChart('ch-ord',hOrd,'#facc15',60)
+  renderChart('ch-cst',hCst,'#f87171',60)
+  if(hInv.length){
+    document.getElementById('cn-inv').textContent=hInv[hInv.length-1]+'箱'
+    document.getElementById('cn-ord').textContent=hOrd[hOrd.length-1]+'箱'
+    document.getElementById('cn-cst').textContent='$'+hCst[hCst.length-1].toFixed(1)
   }
 
   // 動作區顯示
-  document.getElementById('action-zone').style.display='block'
-  document.getElementById('waiting-zone').style.display='none'
-  document.getElementById('order-input').value=''
-  document.getElementById('order-input').focus()
+  document.getElementById('g-az').style.display='block'
+  document.getElementById('g-wait').style.display='none'
+  document.getElementById('g-input').value=''
+  document.getElementById('g-input').focus()
 }
 
-function renderChart(id, data, color){
-  const el=document.getElementById(id)
-  el.innerHTML=''
-  if(data.length===0) return
+function renderChart(id,data,color,maxH){
+  const el=document.getElementById(id);el.innerHTML=''
   const max=Math.max(...data,1)
-  data.forEach(v=>{
+  // 畫滿20格
+  for(let i=0;i<20;i++){
     const bar=document.createElement('div')
-    bar.className='pixel-bar'
-    bar.style.cssText=`height:${Math.max(3,Math.round((v/max)*100))}%;background:${color};opacity:${0.4+0.6*(v/max)}`
+    bar.className='pbar'
+    if(i<data.length){
+      const v=data[i],h=Math.max(2,Math.round((v/max)*100))
+      bar.style.cssText=`height:${h}%;background:${color};opacity:${.35+.65*(v/max)}`
+    }else{
+      bar.style.cssText=`height:2px;background:${color};opacity:.12;align-self:flex-start`
+    }
     el.appendChild(bar)
-  })
-  // 填滿空位
-  for(let i=data.length;i<20;i++){
-    const empty=document.createElement('div')
-    empty.className='pixel-bar'
-    empty.style.cssText=`height:2px;background:${color};opacity:0.1`
-    el.appendChild(empty)
   }
 }
 
-// ── 提交決策 ─────────────────────────────────────────────────────
-function submitOrder(){
-  const val=parseInt(document.getElementById('order-input').value)
-  if(isNaN(val)||val<0)return
-  clearInterval(timerInt)
-  document.getElementById('hud-timer').classList.remove('blink')
-  doSubmit(val)
-}
-
+// ── SUBMIT ────────────────────────────────────
 function doSubmit(qty){
-  document.getElementById('action-zone').style.display='none'
-  document.getElementById('waiting-zone').style.display='block'
-  document.getElementById('submitted-qty').textContent=qty
+  qty=Math.max(0,Math.round(qty))
+  clearInterval(timerID)
+  document.getElementById('hud-timer').classList.remove('blink')
+  document.getElementById('g-az').style.display='none'
+  document.getElementById('g-wait').style.display='block'
+  document.getElementById('g-sub-n').textContent=qty
 
   const ao={}
-  for(const r of ROLES) if(r!==activeRole) ao[r]=autoOrder(r,gameState)
-  const allOrders={...ao,[activeRole]:qty}
+  for(const r of ROLES)if(r!==ROLE)ao[r]=auto(r,GS)
+  const all={...ao,[ROLE]:qty}
 
   setTimeout(()=>{
-    const{newState,snap}=processWeek(gameState,allOrders)
-    gameState=newState; lastSnap=snap
-
-    const s=snap[activeRole]
-    histInv.push(s.inventory)
-    histOrd.push(s.order)
-    histCost.push(s.cost)
-
-    if(newState.status==='finished'){showDebrief();return}
-    updateGameUI()
-    startTimer()
-  },500)
+    const{ns,snap}=processWeek(GS,all)
+    GS=ns;SNAP=snap
+    const s=snap[ROLE]
+    hInv.push(s.inv);hOrd.push(s.ord);hCst.push(s.cost)
+    if(ns.status==='done'){showDebrief();return}
+    refreshUI();startTimer()
+  },400)
 }
 
-// ── 複盤 ─────────────────────────────────────────────────────────
-function showDebrief(){
-  showScreen('debrief')
+function submitOrder(){
+  const v=parseInt(document.getElementById('g-input').value)
+  if(isNaN(v)||v<0)return
+  doSubmit(v)
+}
 
-  document.getElementById('db-mode').textContent=MODE_LABELS[gameState.mode]||gameState.mode
-  document.getElementById('db-mode-desc').textContent=MODE_DESCS[gameState.mode]||''
-  document.getElementById('db-base').textContent=gameState.base
-  document.getElementById('db-peak').textContent=gameState.peak
+// ── DEBRIEF ───────────────────────────────────
+function showDebrief(){
+  show('end')
+  document.getElementById('db-mode').textContent=GS.mode
+  document.getElementById('db-mode-desc').textContent=GS.modeDesc
+  document.getElementById('db-base').textContent=GS.base
+  document.getElementById('db-peak').textContent=GS.peak
+  document.getElementById('db-myrole').textContent=`${RCFG[ROLE].emoji} ${RCFG[ROLE].name}`
+  document.getElementById('db-myrole').style.color=RCFG[ROLE].color
 
   const res={}
-  for(const r of ROLES) res[r]={cost:gameState.roles[r].cost,history:gameState.roles[r].history}
-  const teamTotal=ROLES.reduce((s,r)=>s+res[r].cost,0)
-  const myCost=res[activeRole].cost
-  const myThreshold=ROLE_CFG[activeRole].threshold
+  for(const r of ROLES)res[r]={cost:GS.roles[r].cost,h:GS.roles[r].history}
+  const myCost=res[ROLE].cost,thr=RCFG[ROLE].threshold
 
   document.getElementById('db-cost').textContent=`$${myCost.toFixed(1)}`
-  document.getElementById('db-cost').style.color=myCost<myThreshold?'var(--green)':'var(--red)'
-  const verdict=document.getElementById('db-verdict')
-  if(myCost<myThreshold*0.7){verdict.textContent='🌟 完美！遠超優秀標準！';verdict.style.color='var(--gold)'}
-  else if(myCost<myThreshold){verdict.textContent='✅ 達到優秀標準！';verdict.style.color='var(--green)'}
-  else if(myCost<myThreshold*1.3){verdict.textContent='⚠️ 接近目標，繼續練習！';verdict.style.color='var(--yellow)'}
-  else{verdict.textContent='❌ 目標未達，再試一次！';verdict.style.color='var(--red)'}
+  document.getElementById('db-cost').style.color=myCost<thr?'var(--grn)':'var(--red)'
+  const vEl=document.getElementById('db-verdict')
+  if(myCost<thr*.6){vEl.textContent='🌟 完美！遠超優秀標準！';vEl.style.color='var(--gold)'}
+  else if(myCost<thr){vEl.textContent='✅ 達到優秀標準！';vEl.style.color='var(--grn)'}
+  else if(myCost<thr*1.4){vEl.textContent='⚠️ 接近目標，再練習！';vEl.style.color='var(--yel)'}
+  else{vEl.textContent='❌ 目標未達，再試一次！';vEl.style.color='var(--red)'}
+
+  // 需求圖
+  renderChart('db-demand-chart',GS.curve,'#facc15',60)
 
   // 排名
   const sorted=[...ROLES].sort((a,b)=>res[a].cost-res[b].cost)
-  const rankEl=document.getElementById('db-rankings')
-  rankEl.innerHTML=''
+  const rEl=document.getElementById('db-rank');rEl.innerHTML=''
   sorted.forEach((role,i)=>{
-    const cfg=ROLE_CFG[role],r=res[role],isMe=role===activeRole
+    const cfg=RCFG[role],r=res[role],isMe=role===ROLE
     const div=document.createElement('div')
-    div.style.cssText=`display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:8px;background:${isMe?'#001a00':'var(--panel)'};border:${isMe?'2px solid var(--green)':'1px solid var(--border)'}`
+    div.style.cssText=`display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:8px;background:${isMe?'#002200':'var(--panel)'};border:${isMe?'2px solid var(--grn)':'2px solid var(--b1)'}`
     div.innerHTML=`
-      <div style="font-size:1.1rem;min-width:24px">${['🥇','🥈','🥉','4️⃣'][i]}</div>
-      <canvas id="db-spr-${role}" width="28" height="36" style="width:28px;height:36px;image-rendering:pixelated;flex-shrink:0"></canvas>
+      <span style="font-size:14px;min-width:22px">${['🥇','🥈','🥉','4️'][i]}</span>
+      <canvas id="dr-${role}" width="26" height="32" style="width:26px;height:32px;flex-shrink:0"></canvas>
       <div style="flex:1">
-        <div style="font-size:0.82rem;font-weight:700;color:${cfg.color}">${cfg.emoji} ${cfg.name}${isMe?' ← 你':''}</div>
-        <div style="font-size:0.65rem;color:var(--dim);margin-top:2px">目標 &lt;$${cfg.threshold}</div>
+        <div class="t-xs" style="color:${cfg.color}">${cfg.emoji} ${cfg.name}${isMe?' ← 你':''}</div>
+        <div class="t-xs" style="color:var(--c2);margin-top:3px">目標 &lt;$${cfg.threshold}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:1rem;font-weight:900;color:${r.cost<cfg.threshold?'var(--green)':'var(--red)'}">$${r.cost.toFixed(1)}</div>
-        ${r.cost<cfg.threshold?'<div style="font-size:0.6rem;color:var(--green)">✅ 優秀</div>':''}
+        <div class="t-sm" style="color:${r.cost<cfg.threshold?'var(--grn)':'var(--red)'}">$${r.cost.toFixed(1)}</div>
+        ${r.cost<cfg.threshold?'<div class="t-xs" style="color:var(--grn)">✅優秀</div>':''}
       </div>
     `
-    rankEl.appendChild(div)
-    setTimeout(()=>drawSprite('db-spr-'+role,role),50)
+    rEl.appendChild(div)
+    setTimeout(()=>drawSpr('dr-'+role,role,26,32),30)
   })
 
-  // 牛鞭效應圖
-  const canvas=document.getElementById('bullwhip-canvas')
+  // 牛鞭效應 canvas
+  const canvas=document.getElementById('db-bw')
   const ctx=canvas.getContext('2d')
-  ctx.clearRect(0,0,440,130)
-
-  const allData={
-    consumer:gameState.curve,
-    retailer:res.retailer.history.map(w=>w.order),
-    wholesaler:res.wholesaler.history.map(w=>w.order),
-    distributor:res.distributor.history.map(w=>w.order),
-    manufacturer:res.manufacturer.history.map(w=>w.order),
+  ctx.clearRect(0,0,360,110)
+  const ad={
+    consumer:GS.curve,
+    retailer:res.retailer.h.map(w=>w.ord),
+    wholesaler:res.wholesaler.h.map(w=>w.ord),
+    distributor:res.distributor.h.map(w=>w.ord),
+    manufacturer:res.manufacturer.h.map(w=>w.ord),
   }
-  const colors={consumer:'#555',retailer:'#4fc3f7',wholesaler:'#4ade80',distributor:'#fbbf24',manufacturer:'#f87171'}
-  const maxV=Math.max(...Object.values(allData).flat(),1)
-
+  const cols={consumer:'#444',retailer:'#38bdf8',wholesaler:'#4ade80',distributor:'#facc15',manufacturer:'#f87171'}
+  const maxV=Math.max(...Object.values(ad).flat(),1)
   // 網格
-  ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1
-  for(let i=0;i<=4;i++){ctx.beginPath();ctx.moveTo(0,i*30);ctx.lineTo(440,i*30);ctx.stroke()}
-
-  Object.entries(allData).forEach(([key,data])=>{
-    if(!data||data.length===0)return
-    ctx.strokeStyle=colors[key];ctx.lineWidth=key==='consumer'?1.5:2
-    ctx.shadowColor=colors[key];ctx.shadowBlur=key==='consumer'?0:5
+  ctx.strokeStyle='#1a0e1f';ctx.lineWidth=1
+  for(let i=0;i<=4;i++){ctx.beginPath();ctx.moveTo(0,i*26);ctx.lineTo(360,i*26);ctx.stroke()}
+  Object.entries(ad).forEach(([key,data])=>{
+    if(!data?.length)return
+    ctx.strokeStyle=cols[key];ctx.lineWidth=key==='consumer'?1.5:2
+    ctx.shadowColor=cols[key];ctx.shadowBlur=key==='consumer'?0:6
     ctx.beginPath()
-    data.forEach((v,i)=>{
-      const x=(i/(Math.max(data.length-1,1)))*436+2
-      const y=122-((v/maxV)*110)
-      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
-    })
-    ctx.stroke()
-    ctx.shadowBlur=0
+    data.forEach((v,i)=>{const x=(i/(data.length-1))*354+3,y=104-((v/maxV)*96);i?ctx.lineTo(x,y):ctx.moveTo(x,y)})
+    ctx.stroke();ctx.shadowBlur=0
   })
 
-  // 教學文字
-  const bf=Math.max(...(res.manufacturer.history.map(w=>w.order)||[1]))
-  const cd=Math.max(...(gameState.curve||[1]))
-  const amp=(bf/cd).toFixed(1)
-  document.getElementById('db-lesson').innerHTML=`
-    消費者需求只從 ${gameState.base} 箱跳到 ${gameState.peak} 箱（+${gameState.peak-gameState.base}箱）<br>
-    但製造商的訂單峰值卻高達 ${bf} 箱（放大了 ${amp} 倍！）<br><br>
-    原因：每個角色只看到局部資訊，在不確定中過度下單<br>
-    解法：共享 POS 數據・縮短前置時間・協同預測
-  `
+  const mfgMax=Math.max(...(res.manufacturer.h.map(w=>w.ord)||[1]))
+  const demMax=Math.max(...GS.curve)
+  document.getElementById('db-lesson').innerHTML=
+    `消費者需求峰值：${demMax} 箱<br>`+
+    `製造商訂單峰值：${mfgMax} 箱（放大了 ${(mfgMax/demMax).toFixed(1)} 倍！）<br><br>`+
+    `▸ 每層只看局部資訊，在不確定中過度反應<br>`+
+    `▸ 解法：共享POS數據・縮短前置時間・協同預測`
 
   // 儲存紀錄
-  hiScores.push({role:activeRole,cost:myCost})
-  hiScores.sort((a,b)=>a.cost-b.cost)
-  hiScores=hiScores.slice(0,10)
-  localStorage.setItem('beerHi2',JSON.stringify(hiScores))
+  HI.push({r:ROLE,c:myCost})
+  HI.sort((a,b)=>a.c-b.c)
+  HI=HI.slice(0,10)
+  localStorage.setItem('bgh3',JSON.stringify(HI))
 }
 
-function restartGame(){
-  clearInterval(timerInt)
-  gameState=null;activeRole=null;lastSnap=null
-  histInv=[];histOrd=[];histCost=[]
-  initHome();showScreen('home')
+function restart(){
+  clearInterval(timerID)
+  GS=null;ROLE=null;SNAP=null;hInv=[];hOrd=[];hCst=[]
+  initHome();show('home')
 }
 
-// ── 啟動 ─────────────────────────────────────────────────────────
+// ── INIT ──────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   initHome()
-  document.getElementById('order-input').addEventListener('keydown',e=>{
+  document.getElementById('g-input').addEventListener('keydown',e=>{
     if(e.key==='Enter')submitOrder()
   })
 })
