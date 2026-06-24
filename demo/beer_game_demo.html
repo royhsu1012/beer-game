@@ -1,590 +1,639 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>🍺 Beer Distribution Game</title>
+<title>🍺 啤酒供應鏈遊戲</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
 :root {
-  --bg:       #0d0d1a;
-  --bg2:      #1a1a2e;
-  --bg3:      #16213e;
-  --panel:    #0f3460;
-  --border:   #533483;
-  --text:     #e0e0ff;
-  --dim:      #7070a0;
-  --retailer: #4fc3f7;
-  --wholesale:#69f0ae;
-  --dist:     #ffd740;
-  --mfg:      #ff6e6e;
-  --accent:   #bb86fc;
-  --gold:     #ffd700;
-  --red:      #ff4444;
-  --green:    #44ff88;
+  --bg:      #0d0d1a;
+  --bg2:     #1a1a2e;
+  --panel:   #0f1b35;
+  --border:  #2a3a6e;
+  --text:    #e0e0ff;
+  --dim:     #5a6080;
+  --blue:    #4fc3f7;
+  --green:   #4ade80;
+  --yellow:  #fbbf24;
+  --red:     #f87171;
+  --purple:  #a78bfa;
+  --gold:    #ffd700;
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
   background: var(--bg);
-  font-family: 'Press Start 2P', monospace;
   color: var(--text);
+  font-family: -apple-system, 'Microsoft JhengHei', sans-serif;
   min-height: 100vh;
-  overflow-x: hidden;
+  max-width: 480px;
+  margin: 0 auto;
 }
 
-/* ── SCANLINE EFFECT ── */
+/* 掃描線 */
 body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-  pointer-events: none;
-  z-index: 9999;
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.06) 3px,rgba(0,0,0,0.06) 4px);
+  pointer-events:none;z-index:9999;
 }
 
-/* ── PIXEL BORDER ── */
-.px-box {
-  border: 3px solid var(--border);
-  box-shadow: 3px 3px 0 #000, inset 0 0 0 1px rgba(255,255,255,0.05);
-  background: var(--bg2);
-}
-.px-box-accent {
-  border: 3px solid var(--accent);
-  box-shadow: 3px 3px 0 #000, 0 0 12px rgba(187,134,252,0.3);
-  background: var(--bg2);
+.screen { display:none; }
+.screen.active { display:block; min-height:100vh; }
+
+/* ── 像素邊框 ── */
+.card {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 #000;
 }
 
-/* ── PIXEL BUTTON ── */
-.px-btn {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.5rem;
-  padding: 8px 14px;
-  border: 3px solid;
+/* ── 按鈕 ── */
+.btn {
+  font-family: inherit;
+  font-weight: 700;
+  border: 2px solid;
   cursor: pointer;
-  background: var(--bg3);
-  color: var(--text);
-  transition: transform 0.05s;
-  letter-spacing: 0.05em;
-}
-.px-btn:active { transform: translate(2px,2px); box-shadow: none !important; }
-.px-btn-blue  { border-color: var(--retailer); color: var(--retailer); box-shadow: 3px 3px 0 #000; }
-.px-btn-green { border-color: var(--wholesale); color: var(--wholesale); box-shadow: 3px 3px 0 #000; }
-.px-btn-gold  { border-color: var(--gold); color: var(--gold); box-shadow: 3px 3px 0 #000; }
-.px-btn:hover { filter: brightness(1.2); }
-
-/* ── PIXEL INPUT ── */
-.px-input {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 0.7rem;
-  background: #000;
-  color: var(--green);
-  border: 3px solid var(--wholesale);
-  padding: 8px 12px;
+  background: var(--panel);
+  transition: transform 0.05s, filter 0.05s;
+  display: block;
   width: 100%;
-  outline: none;
-  box-shadow: inset 2px 2px 0 #003300;
-  caret-color: var(--green);
 }
-.px-input:focus { border-color: var(--accent); box-shadow: 0 0 8px rgba(187,134,252,0.5); }
+.btn:active { transform: translate(2px,2px); box-shadow: none !important; }
+.btn:hover  { filter: brightness(1.15); }
+.btn-blue   { color: var(--blue);   border-color: var(--blue);   box-shadow: 4px 4px 0 #000; }
+.btn-green  { color: var(--green);  border-color: var(--green);  box-shadow: 4px 4px 0 #000; }
+.btn-gold   { color: var(--gold);   border-color: var(--gold);   box-shadow: 4px 4px 0 #000; }
+.btn-yellow { color: var(--yellow); border-color: var(--yellow); box-shadow: 4px 4px 0 #000; }
+.btn-red    { color: var(--red);    border-color: var(--red);    box-shadow: 4px 4px 0 #000; }
 
-/* ── BLINK ── */
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
-@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
-@keyframes walk  {
-  0%  { transform: translateX(0) scaleX(1); }
-  48% { transform: translateX(8px) scaleX(1); }
-  50% { transform: translateX(8px) scaleX(-1); }
-  98% { transform: translateX(0) scaleX(-1); }
-  100%{ transform: translateX(0) scaleX(1); }
-}
-@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
-@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.97)} }
-@keyframes scanline { 0%{top:-100%} 100%{top:100%} }
-@keyframes glow { 0%,100%{text-shadow:0 0 4px currentColor} 50%{text-shadow:0 0 14px currentColor,0 0 28px currentColor} }
+/* ── 動畫 ── */
+@keyframes float   { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes blink   { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes pulse   { 0%,100%{opacity:1} 50%{opacity:0.6} }
+@keyframes glow    { 0%,100%{text-shadow:0 0 6px currentColor} 50%{text-shadow:0 0 20px currentColor,0 0 40px currentColor} }
+@keyframes shake   { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-3px)} 75%{transform:translateX(3px)} }
+@keyframes slideIn { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
 
-.blink  { animation: blink 1s step-end infinite; }
-.float  { animation: float 2s ease-in-out infinite; }
-.glow   { animation: glow 2s ease-in-out infinite; }
+.float   { animation: float 2s ease-in-out infinite; }
+.blink   { animation: blink 1s step-end infinite; }
+.pulse   { animation: pulse 1.5s ease-in-out infinite; }
+.glow    { animation: glow 2s ease-in-out infinite; }
+.shake   { animation: shake 0.3s ease-in-out; }
+.slide-in{ animation: slideIn 0.3s ease-out; }
 
-/* ── PIXEL CHART ── */
-.chart-container {
-  position: relative;
-  background: #000;
-  border: 3px solid var(--border);
-  padding: 8px;
-}
-.chart-bars {
+/* ── 像素柱狀圖 ── */
+.pixel-chart {
   display: flex;
   align-items: flex-end;
   gap: 3px;
-  height: 64px;
+  background: #000;
+  border: 2px solid var(--border);
+  padding: 6px 6px 0;
+  height: 60px;
 }
-.chart-bar {
+.pixel-bar {
   flex: 1;
-  min-width: 4px;
-  transition: height 0.3s steps(4);
+  min-width: 3px;
+  transition: height 0.2s;
   image-rendering: pixelated;
 }
 
-/* ── STAR RATING ── */
-.stars { color: var(--gold); letter-spacing: 2px; font-size: 0.5rem; }
-
-/* ── PROGRESS BAR ── */
-.px-progress {
-  height: 12px;
+/* ── 輸入框 ── */
+.px-input {
+  font-family: inherit;
+  font-size: 1.4rem;
+  font-weight: 700;
   background: #000;
-  border: 2px solid var(--border);
-  position: relative;
-  overflow: hidden;
+  color: var(--green);
+  border: 2px solid var(--green);
+  padding: 10px 14px;
+  width: 100%;
+  outline: none;
+  text-align: center;
+  box-shadow: inset 2px 2px 0 #002200;
+  caret-color: var(--green);
 }
-.px-progress-fill {
-  height: 100%;
-  transition: width 0.3s steps(8);
-  background: repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 4px, transparent 4px, transparent 8px);
+.px-input:focus { border-color: var(--blue); box-shadow: 0 0 0 2px var(--blue)33; }
+
+/* ── 數字大顯示 ── */
+.big-num { font-size: 2.5rem; font-weight: 900; line-height: 1; }
+.med-num { font-size: 1.4rem; font-weight: 700; }
+.label   { font-size: 0.65rem; color: var(--dim); letter-spacing: 0.05em; }
+
+/* ── 角色卡 ── */
+.role-card {
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform 0.05s;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.role-card:active { transform: translate(2px,2px); }
+
+/* ── 動作區（最重要的） ── */
+.action-zone {
+  background: #000d00;
+  border: 3px solid var(--green);
+  box-shadow: 0 0 20px rgba(74,222,128,0.2), 4px 4px 0 #000;
+  padding: 16px;
 }
 
-/* ── LAYOUT ── */
-.screen { display: none; min-height: 100vh; }
-.screen.active { display: block; }
-
-/* ── PIXEL SPRITE via CSS (16×16 grid → 6px each = 96px) ── */
-.sprite { display: grid; gap: 0; }
-.sprite .px { display: block; }
-
-/* ── NOTIFICATION ── */
-.notif {
-  position: fixed;
-  top: 16px; right: 16px;
-  font-size: 0.45rem;
-  padding: 8px 12px;
-  z-index: 1000;
-  animation: float 0.3s ease-out;
+/* ── 提示橫幅 ── */
+.hint-banner {
+  background: #1a1200;
+  border-left: 4px solid var(--yellow);
+  padding: 10px 14px;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--yellow);
 }
 
-/* ── TICKER ── */
-.ticker {
-  font-size: 0.4rem;
-  color: var(--wholesale);
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  overflow: hidden;
-  border-top: 2px solid var(--border);
+/* ── 頂部HUD ── */
+.hud {
+  background: #000;
   border-bottom: 2px solid var(--border);
-  padding: 4px 0;
-  background: #000;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
-.ticker-inner {
-  display: inline-block;
-  animation: ticker-scroll 20s linear infinite;
-}
-@keyframes ticker-scroll { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 0: HOME
-══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════
+     首頁 — 選角色
+══════════════════════════════ -->
 <div id="screen-home" class="screen active">
-  <div style="max-width:480px;margin:0 auto;padding:1.5rem 1rem">
+  <div style="padding:16px">
 
-    <!-- Title -->
-    <div style="text-align:center;margin-bottom:1.5rem">
-      <div style="font-size:0.45rem;color:var(--dim);letter-spacing:0.2em;margin-bottom:8px">SUPPLY CHAIN SIM</div>
-      <div style="font-size:0.85rem;color:var(--gold);line-height:1.6" class="glow">BEER<br>GAME</div>
-      <div style="font-size:0.35rem;color:var(--dim);margin-top:8px;letter-spacing:0.1em">VER 2.0 · MIT SLOAN</div>
+    <!-- 標題 -->
+    <div style="text-align:center;padding:20px 0 16px">
+      <div style="font-size:2.5rem;margin-bottom:8px">🍺</div>
+      <div style="font-size:1.3rem;font-weight:900;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
+      <div style="font-size:0.72rem;color:var(--dim);margin-top:6px">體驗「牛鞭效應」的教學模擬</div>
     </div>
 
-    <!-- Four pixel characters preview -->
-    <div style="display:flex;justify-content:center;gap:16px;margin-bottom:1.5rem;padding:16px;background:#000;border:3px solid var(--border)">
-      <!-- Retailer sprite (blue apron clerk) -->
-      <div style="text-align:center">
-        <div class="float" style="animation-delay:0s">
-          <canvas id="spr-retailer-home" width="48" height="64" style="width:48px;height:64px"></canvas>
-        </div>
-        <div style="font-size:0.3rem;color:var(--retailer);margin-top:4px">零售</div>
-      </div>
-      <!-- Wholesaler sprite (green hardhat) -->
-      <div style="text-align:center">
-        <div class="float" style="animation-delay:0.4s">
-          <canvas id="spr-wholesaler-home" width="48" height="64" style="width:48px;height:64px"></canvas>
-        </div>
-        <div style="font-size:0.3rem;color:var(--wholesale);margin-top:4px">批发</div>
-      </div>
-      <!-- Distributor sprite (yellow jacket) -->
-      <div style="text-align:center">
-        <div class="float" style="animation-delay:0.8s">
-          <canvas id="spr-distributor-home" width="48" height="64" style="width:48px;height:64px"></canvas>
-        </div>
-        <div style="font-size:0.3rem;color:var(--dist);margin-top:4px">分销</div>
-      </div>
-      <!-- Manufacturer sprite (red engineer) -->
-      <div style="text-align:center">
-        <div class="float" style="animation-delay:1.2s">
-          <canvas id="spr-manufacturer-home" width="48" height="64" style="width:48px;height:64px"></canvas>
-        </div>
-        <div style="font-size:0.3rem;color:var(--mfg);margin-top:4px">制造</div>
+    <!-- 四個角色 → 選一個 -->
+    <div style="font-size:0.78rem;color:var(--dim);margin-bottom:10px">▶ 選擇你要扮演的角色</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:18px" id="role-list">
+      <!-- JS 注入 -->
+    </div>
+
+    <!-- 遊戲說明 -->
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;margin-bottom:10px;color:var(--purple)">📖 怎麼玩？</div>
+      <div style="font-size:0.75rem;color:var(--dim);line-height:2">
+        <div>⏱ 共 <b style="color:var(--text)">20週</b>，每週 <b style="color:var(--text)">60秒</b> 決策</div>
+        <div>📦 下單後 <b style="color:var(--text)">2週</b> 才到貨（前置時間）</div>
+        <div>💰 庫存成本 <b style="color:var(--green)">$0.50</b>／箱／週</div>
+        <div>💔 缺貨成本 <b style="color:var(--red)">$1.00</b>／箱／週</div>
+        <div>🎲 每局需求隨機，遊戲結束才揭曉</div>
       </div>
     </div>
 
-    <!-- Role select -->
-    <div style="font-size:0.4rem;color:var(--dim);margin-bottom:10px;letter-spacing:0.1em">▶ SELECT YOUR ROLE</div>
-    <div id="role-buttons" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem">
-      <!-- injected by JS -->
-    </div>
-
-    <!-- High scores -->
-    <div class="px-box" style="padding:10px;margin-bottom:1rem">
-      <div style="font-size:0.35rem;color:var(--gold);margin-bottom:8px;letter-spacing:0.1em">── HI-SCORE ──</div>
-      <div id="hiscore-list" style="font-size:0.32rem;color:var(--dim);line-height:2">NO RECORDS YET</div>
-    </div>
-
-    <!-- Rules quick ref -->
-    <div class="px-box" style="padding:10px;font-size:0.3rem;color:var(--dim);line-height:2.2">
-      <div style="color:var(--text);margin-bottom:4px">▶ RULES</div>
-      <div>⏱ 20 WEEKS · 60 SEC/WEEK</div>
-      <div>📦 LEAD TIME: 2 WEEKS</div>
-      <div>💰 HOLD: $0.50 · SHORT: $1.00</div>
-      <div>🎲 DEMAND: SEASONAL RANDOM</div>
+    <!-- 最高紀錄 -->
+    <div class="card" style="padding:14px">
+      <div style="font-size:0.78rem;font-weight:700;margin-bottom:8px;color:var(--gold)">🏆 最佳紀錄</div>
+      <div id="hiscore-list" style="font-size:0.72rem;color:var(--dim);line-height:2.2">尚無紀錄</div>
     </div>
 
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 1: GAME
-══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════
+     角色介紹彈窗
+══════════════════════════════ -->
+<div id="screen-rolecard" class="screen">
+  <div style="padding:16px">
+
+    <div id="rc-header" style="text-align:center;padding:20px 0 16px">
+      <canvas id="rc-sprite" width="80" height="96" style="width:80px;height:96px;image-rendering:pixelated" class="float"></canvas>
+      <div id="rc-name" style="font-size:1.2rem;font-weight:900;margin-top:10px">零售商</div>
+      <div id="rc-title" style="font-size:0.72rem;color:var(--dim);margin-top:4px"></div>
+    </div>
+
+    <!-- 你的任務 -->
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <div style="font-size:0.78rem;font-weight:700;margin-bottom:8px">🎯 你的任務</div>
+      <div id="rc-mission" style="font-size:0.8rem;line-height:1.9;color:var(--dim)"></div>
+    </div>
+
+    <!-- 你能看到什麼 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div class="card" style="padding:12px">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--green);margin-bottom:8px">✅ 你能看到</div>
+        <div id="rc-cansee" style="font-size:0.7rem;color:var(--dim);line-height:2.2"></div>
+      </div>
+      <div class="card" style="padding:12px">
+        <div style="font-size:0.72rem;font-weight:700;color:var(--red);margin-bottom:8px">❌ 你看不到</div>
+        <div id="rc-cantsee" style="font-size:0.7rem;color:var(--dim);line-height:2.2"></div>
+      </div>
+    </div>
+
+    <!-- 胜利條件 -->
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <div style="font-size:0.72rem;color:var(--dim);margin-bottom:4px">🏆 勝利條件</div>
+      <div id="rc-victory" style="font-size:0.85rem;font-weight:700;line-height:1.7"></div>
+    </div>
+
+    <!-- 策略提示 -->
+    <div class="hint-banner" style="margin-bottom:16px">
+      <div style="font-size:0.7rem;font-weight:700;margin-bottom:4px;color:var(--yellow)">💡 策略提示</div>
+      <div id="rc-tip" style="font-size:0.75rem"></div>
+    </div>
+
+    <button class="btn btn-green" id="rc-start-btn" onclick="enterGame()"
+      style="font-size:1rem;font-weight:900;padding:16px">
+      ▶ 我準備好了，開始！
+    </button>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════
+     主遊戲畫面
+══════════════════════════════ -->
 <div id="screen-game" class="screen">
 
-  <!-- Top HUD -->
-  <div style="background:#000;border-bottom:3px solid var(--border);padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
-    <div id="hud-role" style="font-size:0.4rem;color:var(--accent)">RETAILER</div>
-    <div style="display:flex;gap:12px;align-items:center">
-      <div style="font-size:0.35rem;color:var(--dim)">WK<span id="hud-week" style="color:var(--text)">01</span>/20</div>
-      <div id="hud-timer" style="font-size:0.6rem;color:var(--gold)" class="blink">60</div>
-      <div style="font-size:0.35rem;color:var(--dim)">$<span id="hud-cost" style="color:var(--red)">0</span></div>
-    </div>
-  </div>
-
-  <div style="max-width:480px;margin:0 auto;padding:8px">
-
-    <!-- Character + Status -->
-    <div style="display:flex;gap:10px;margin-bottom:8px">
-      <!-- Sprite panel -->
-      <div class="px-box" style="padding:10px;display:flex;flex-direction:column;align-items:center;min-width:80px">
-        <canvas id="game-sprite" width="48" height="64" style="width:48px;height:64px" class="float"></canvas>
-        <div id="game-role-name" style="font-size:0.28rem;color:var(--accent);margin-top:6px;text-align:center">RETAILER</div>
-        <div id="game-stars" class="stars" style="margin-top:4px">★★★</div>
-      </div>
-      <!-- Stats -->
-      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div class="px-box" style="padding:6px;text-align:center">
-            <div style="font-size:0.28rem;color:var(--dim)">STOCK</div>
-            <div id="stat-inv" style="font-size:0.9rem;color:var(--green);margin-top:2px">12</div>
-          </div>
-          <div class="px-box" style="padding:6px;text-align:center">
-            <div style="font-size:0.28rem;color:var(--dim)">BACK</div>
-            <div id="stat-back" style="font-size:0.9rem;color:var(--red);margin-top:2px">0</div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-          <div class="px-box" style="padding:6px;text-align:center">
-            <div style="font-size:0.28rem;color:var(--dim)">PIPE</div>
-            <div id="stat-pipe" style="font-size:0.9rem;color:var(--dist);margin-top:2px">8</div>
-          </div>
-          <div class="px-box" style="padding:6px;text-align:center">
-            <div style="font-size:0.28rem;color:var(--dim)">ORDER</div>
-            <div id="stat-order" style="font-size:0.9rem;color:var(--retailer);margin-top:2px">—</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- This week info -->
-    <div class="px-box" style="padding:8px;margin-bottom:8px;font-size:0.32rem">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <span style="color:var(--dim)">▸ ARRIVED</span>
-        <span id="info-recv" style="color:var(--green)">+0 BOX</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
-        <span style="color:var(--dim)">▸ DEMAND</span>
-        <span id="info-demand" style="color:var(--text)">— BOX</span>
-      </div>
-      <div style="display:flex;justify-content:space-between">
-        <span style="color:var(--dim)">▸ WK COST</span>
-        <span id="info-wkcost" style="color:var(--red)">$—</span>
-      </div>
-    </div>
-
-    <!-- Order input -->
-    <div id="order-panel" class="px-box-accent" style="padding:10px;margin-bottom:8px">
-      <div style="font-size:0.32rem;color:var(--accent);margin-bottom:8px" id="order-label">▶ PLACE ORDER TO WHOLESALER</div>
-      <div style="display:flex;gap:8px">
-        <input type="number" min="0" id="order-input" class="px-input" placeholder="0" style="flex:1"/>
-        <button class="px-btn px-btn-green" onclick="submitOrder()" style="white-space:nowrap">OK ▶</button>
-      </div>
-      <!-- Timer bar -->
-      <div class="px-progress" style="margin-top:8px">
-        <div id="timer-bar" class="px-progress-fill" style="width:100%"></div>
-      </div>
-    </div>
-
-    <!-- Submitted state -->
-    <div id="submitted-panel" style="display:none" class="px-box" style="padding:10px;margin-bottom:8px;text-align:center">
-      <div style="font-size:0.4rem;color:var(--green)">✓ SUBMITTED</div>
-      <div id="submit-progress" style="font-size:0.3rem;color:var(--dim);margin-top:6px">WAITING 1/4...</div>
-    </div>
-
-    <!-- Hint -->
-    <div id="hint-box" style="display:none" class="px-box" style="padding:8px;margin-bottom:8px;border-color:var(--dist)">
-      <div style="font-size:0.28rem;color:var(--dist);line-height:1.8" id="hint-text"></div>
-    </div>
-
-    <!-- Charts -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-      <!-- Inventory chart -->
-      <div>
-        <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">INVENTORY</div>
-        <div class="chart-container">
-          <div id="chart-inv" class="chart-bars"></div>
-        </div>
-      </div>
-      <!-- Order chart -->
-      <div>
-        <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">ORDERS</div>
-        <div class="chart-container">
-          <div id="chart-ord" class="chart-bars"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Cost chart (full width) -->
+  <!-- 頂部 HUD -->
+  <div class="hud">
     <div>
-      <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">CUMULATIVE COST</div>
-      <div class="chart-container" style="height:48px">
-        <div id="chart-cost" class="chart-bars" style="height:40px"></div>
+      <div id="hud-role" style="font-size:0.7rem;font-weight:700">零售商</div>
+      <div id="hud-week-label" style="font-size:0.55rem;color:var(--dim)">第 1 週 / 共 20 週</div>
+    </div>
+    <div style="text-align:center">
+      <div id="hud-timer" style="font-size:1.4rem;font-weight:900;color:var(--gold)" class="blink">60</div>
+      <div style="font-size:0.5rem;color:var(--dim)">秒</div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:0.55rem;color:var(--dim)">累計成本</div>
+      <div id="hud-cost" style="font-size:0.85rem;font-weight:700;color:var(--red)">$0</div>
+    </div>
+  </div>
+
+  <div style="padding:10px">
+
+    <!-- 第1區：本週狀況（你在哪） -->
+    <div style="font-size:0.65rem;color:var(--dim);margin-bottom:6px;letter-spacing:0.05em">━ 本週狀況</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="card" style="padding:10px;text-align:center">
+        <canvas id="g-sprite-small" width="32" height="40" style="width:32px;height:40px;image-rendering:pixelated;margin:0 auto;display:block" class="float"></canvas>
+        <div class="label" style="margin-top:4px">庫存</div>
+        <div id="g-inv" class="big-num" style="color:var(--green);font-size:1.8rem">12</div>
+        <div class="label">箱</div>
+      </div>
+      <div class="card" style="padding:10px;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:2px">📬</div>
+        <div class="label">本週到貨</div>
+        <div id="g-recv" class="big-num" style="color:var(--blue);font-size:1.8rem">+0</div>
+        <div class="label">箱</div>
+      </div>
+      <div class="card" style="padding:10px;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:2px">📋</div>
+        <div class="label" id="g-demand-label">收到訂單</div>
+        <div id="g-demand" class="big-num" style="color:var(--yellow);font-size:1.8rem">—</div>
+        <div class="label">箱</div>
       </div>
     </div>
 
-  </div>
+    <!-- 積壓 & 在途（次要資訊） -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div class="card" style="padding:8px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:1.2rem">⚠️</div>
+        <div>
+          <div class="label">積壓訂單</div>
+          <div id="g-back" style="font-size:1.1rem;font-weight:700;color:var(--red)">0 箱</div>
+        </div>
+      </div>
+      <div class="card" style="padding:8px;display:flex;align-items:center;gap:10px">
+        <div style="font-size:1.2rem">🚚</div>
+        <div>
+          <div class="label">在途貨物</div>
+          <div id="g-pipe" style="font-size:1.1rem;font-weight:700;color:var(--purple)">8 箱</div>
+        </div>
+      </div>
+    </div>
 
-  <!-- Ticker -->
-  <div class="ticker" style="margin-top:8px">
-    <span class="ticker-inner" id="ticker-text">
-      ▸ BEER DISTRIBUTION GAME ▸ SUPPLY CHAIN SIM ▸ WATCH OUT FOR BULLWHIP EFFECT ▸ LEAD TIME: 2 WEEKS ▸
-    </span>
+    <!-- 本週成本小結 -->
+    <div id="g-cost-detail" class="card" style="padding:10px;margin-bottom:10px;display:none">
+      <div style="font-size:0.7rem;font-weight:700;color:var(--dim);margin-bottom:6px">上週結算</div>
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:4px">
+        <span style="color:var(--dim)">庫存成本</span>
+        <span id="g-hc" style="color:var(--yellow)">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.75rem;margin-bottom:6px">
+        <span style="color:var(--dim)">缺貨成本</span>
+        <span id="g-sc" style="color:var(--red)">$0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:0.82rem;font-weight:700;border-top:1px solid var(--border);padding-top:6px">
+        <span>本週合計</span>
+        <span id="g-wc" style="color:var(--red)">$0</span>
+      </div>
+    </div>
+
+    <!-- ★ 第2區：動作區（最重要） ★ -->
+    <div id="action-zone" class="action-zone" style="margin-bottom:10px">
+      <div style="font-size:0.72rem;color:var(--green);font-weight:700;margin-bottom:4px" id="action-title">
+        📦 你要向批發商下幾箱？
+      </div>
+      <div style="font-size:0.65rem;color:var(--dim);margin-bottom:12px" id="action-hint-text">
+        考慮：庫存 + 在途貨物，是否足夠應付下週需求？
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <input type="number" min="0" id="order-input" class="px-input" placeholder="輸入數量"/>
+        <button class="btn btn-green" onclick="submitOrder()"
+          style="width:auto;padding:10px 20px;font-size:1rem;font-weight:900;white-space:nowrap">
+          確認 ▶
+        </button>
+      </div>
+      <!-- 快速選擇 -->
+      <div style="display:flex;gap:6px;flex-wrap:wrap" id="quick-btns">
+        <!-- JS 注入快速按鈕 -->
+      </div>
+    </div>
+
+    <!-- 等待狀態 -->
+    <div id="waiting-zone" style="display:none;margin-bottom:10px">
+      <div class="card" style="padding:16px;text-align:center">
+        <div style="font-size:1.5rem;margin-bottom:6px" class="pulse">⏳</div>
+        <div style="font-size:0.85rem;font-weight:700;color:var(--green)">✅ 已下單 <span id="submitted-qty">0</span> 箱</div>
+        <div style="font-size:0.7rem;color:var(--dim);margin-top:6px">等待其他玩家...</div>
+      </div>
+    </div>
+
+    <!-- 提示 -->
+    <div id="g-hint" class="hint-banner" style="display:none;margin-bottom:10px">
+      <span id="g-hint-text"></span>
+    </div>
+
+    <!-- 第3區：歷史圖表 -->
+    <div style="font-size:0.65rem;color:var(--dim);margin-bottom:6px;letter-spacing:0.05em">━ 趨勢圖</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div>
+        <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">📦 庫存 <span id="chart-inv-now" style="color:var(--green)"></span></div>
+        <div class="pixel-chart" id="chart-inv" style="height:56px"></div>
+      </div>
+      <div>
+        <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">📋 下單量 <span id="chart-ord-now" style="color:var(--yellow)"></span></div>
+        <div class="pixel-chart" id="chart-ord" style="height:56px"></div>
+      </div>
+    </div>
+    <div>
+      <div style="font-size:0.62rem;color:var(--dim);margin-bottom:3px">💰 累計成本 <span id="chart-cost-now" style="color:var(--red)"></span></div>
+      <div class="pixel-chart" id="chart-cost" style="height:44px"></div>
+    </div>
+
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     SCREEN 2: DEBRIEF
-══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════
+     複盤畫面
+══════════════════════════════ -->
 <div id="screen-debrief" class="screen">
-  <div style="max-width:480px;margin:0 auto;padding:1rem">
+  <div style="padding:16px">
 
-    <div style="text-align:center;margin-bottom:1rem">
-      <div style="font-size:0.6rem;color:var(--gold)" class="glow">GAME OVER</div>
-      <div style="font-size:0.32rem;color:var(--dim);margin-top:6px">SUPPLY CHAIN DEBRIEF</div>
+    <div style="text-align:center;padding:16px 0">
+      <div style="font-size:1.5rem;font-weight:900;color:var(--gold)" class="glow">🎉 遊戲結束！</div>
+      <div style="font-size:0.72rem;color:var(--dim);margin-top:6px">供應鏈複盤</div>
     </div>
 
-    <!-- Demand reveal -->
-    <div class="px-box-accent" style="padding:10px;margin-bottom:10px;text-align:center">
-      <div style="font-size:0.3rem;color:var(--dim);margin-bottom:4px">▶ DEMAND PATTERN REVEALED</div>
-      <div id="demand-mode-label" style="font-size:0.45rem;color:var(--accent)">SUMMER PEAK</div>
-      <div id="demand-mode-desc" style="font-size:0.28rem;color:var(--dim);margin-top:4px;line-height:1.8"></div>
+    <!-- 需求模式揭曉 -->
+    <div class="card" style="padding:14px;margin-bottom:12px;border-color:var(--yellow)">
+      <div style="font-size:0.7rem;color:var(--dim);margin-bottom:4px">🎲 本局需求模式（現在才揭曉！）</div>
+      <div id="db-mode" style="font-size:1rem;font-weight:900;color:var(--yellow)">☀️ 夏季旺季型</div>
+      <div id="db-mode-desc" style="font-size:0.72rem;color:var(--dim);margin-top:4px;line-height:1.7"></div>
     </div>
 
-    <!-- Rankings -->
-    <div id="rankings" style="margin-bottom:10px"></div>
+    <!-- 你的成績 -->
+    <div id="db-my-score" class="card" style="padding:14px;margin-bottom:12px;text-align:center">
+      <div style="font-size:0.72rem;color:var(--dim);margin-bottom:6px">你的總成本</div>
+      <div id="db-cost" class="big-num" style="font-size:2.2rem;color:var(--red)">$0</div>
+      <div id="db-verdict" style="font-size:0.8rem;margin-top:8px;font-weight:700"></div>
+    </div>
 
-    <!-- Bullwhip chart -->
-    <div class="px-box" style="padding:10px;margin-bottom:10px">
-      <div style="font-size:0.32rem;color:var(--gold);margin-bottom:8px">▶ BULLWHIP EFFECT</div>
-      <div style="font-size:0.25rem;color:var(--dim);margin-bottom:8px;line-height:1.8">
-        CONSUMER DEMAND VS UPSTREAM ORDERS
+    <!-- 排名 -->
+    <div style="font-size:0.72rem;color:var(--dim);margin-bottom:8px">📊 各角色成本排名</div>
+    <div id="db-rankings" style="margin-bottom:12px"></div>
+
+    <!-- 牛鞭效應圖 -->
+    <div class="card" style="padding:14px;margin-bottom:12px">
+      <div style="font-size:0.82rem;font-weight:700;margin-bottom:4px">📈 牛鞭效應</div>
+      <div style="font-size:0.7rem;color:var(--dim);margin-bottom:10px;line-height:1.7">
+        消費者需求只從 <b id="db-base" style="color:var(--text)">4</b> 箱變成 <b id="db-peak" style="color:var(--text)">8</b> 箱，
+        但越上游的訂單波動越大。
       </div>
-
-      <!-- Legend -->
-      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
-        <span style="font-size:0.25rem;color:var(--dim)">■ <span style="color:#888">CONSUMER</span></span>
-        <span style="font-size:0.25rem;color:var(--retailer)">■ RETAIL</span>
-        <span style="font-size:0.25rem;color:var(--wholesale)">■ WHOLE</span>
-        <span style="font-size:0.25rem;color:var(--dist)">■ DIST</span>
-        <span style="font-size:0.25rem;color:var(--mfg)">■ MFG</span>
+      <!-- 圖例 -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;font-size:0.65rem">
+        <span style="color:#666">■ 消費者</span>
+        <span style="color:var(--blue)">■ 零售商</span>
+        <span style="color:var(--green)">■ 批發商</span>
+        <span style="color:var(--yellow)">■ 分銷商</span>
+        <span style="color:var(--red)">■ 製造商</span>
       </div>
-
-      <!-- Multi-line pixel chart -->
-      <div style="background:#000;padding:6px;border:2px solid var(--border);position:relative">
-        <canvas id="bullwhip-canvas" width="400" height="120" style="width:100%;height:120px"></canvas>
-      </div>
+      <canvas id="bullwhip-canvas" width="440" height="130" style="width:100%;height:130px;background:#000;border:2px solid var(--border)"></canvas>
     </div>
 
-    <!-- Score cards -->
-    <div id="score-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
-
-    <!-- Supply chain lesson -->
-    <div class="px-box" style="padding:10px;margin-bottom:10px;font-size:0.28rem;color:var(--dim);line-height:2">
-      <div style="color:var(--accent);margin-bottom:6px">▶ BULLWHIP EFFECT 101</div>
-      <div id="lesson-text" style="line-height:2"></div>
+    <!-- 學習重點 -->
+    <div class="hint-banner" style="margin-bottom:16px">
+      <div style="font-size:0.75rem;font-weight:700;margin-bottom:6px;color:var(--yellow)">💡 牛鞭效應的啟示</div>
+      <div id="db-lesson" style="font-size:0.72rem;line-height:2;color:var(--yellow)"></div>
     </div>
 
-    <button class="px-btn px-btn-gold" onclick="restartGame()" style="width:100%;padding:12px;font-size:0.45rem">
-      ▶ PLAY AGAIN
+    <button class="btn btn-gold" onclick="restartGame()"
+      style="font-size:1rem;font-weight:900;padding:16px;margin-bottom:12px">
+      🔄 再玩一局（新需求）
     </button>
+
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════
-     JAVASCRIPT ENGINE
-══════════════════════════════════════════════ -->
+<!-- ══════════════════════════════
+     JAVASCRIPT
+══════════════════════════════ -->
 <script>
-// ── PIXEL ART SPRITES (16×16, drawn on canvas) ──────────────────
-// Color palettes
-const PAL = {
-  skin:    '#fbbf24', skin2:   '#d97706',
-  blue:    '#4fc3f7', blue2:   '#0288d1', blue3:  '#01579b',
-  green:   '#69f0ae', green2:  '#00c853', green3: '#1b5e20',
-  yellow:  '#ffd740', yellow2: '#f9a825', yellow3:'#ff6f00',
-  red:     '#ff6e6e', red2:    '#e53935', red3:   '#b71c1c',
-  white:   '#e0e0ff', gray:    '#607080', dark:   '#0d0d1a',
-  black:   '#000000', gold:    '#ffd700',
-  brown:   '#795548', brown2:  '#4e342e',
-  helmet_r:'#ff1744', helmet_g:'#00e676',
+// ── 像素角色（Canvas，16×16） ───────────────────────────────────
+const _ = null
+const P = {
+  skin:'#fbbf24', skin2:'#d97706',
+  b:'#4fc3f7',  b2:'#0288d1', b3:'#01579b',
+  g:'#4ade80',  g2:'#16a34a', g3:'#14532d',
+  y:'#fbbf24',  y2:'#f59e0b', y3:'#92400e',
+  r:'#f87171',  r2:'#dc2626', r3:'#7f1d1d',
+  w:'#e0e0ff', gr:'#607080', dk:'#0d0d1a',
+  bk:'#000000', gd:'#ffd700',
+  br:'#78350f', br2:'#292524',
 }
-const _='';
 
-// Each sprite: 16×16 array of color values
 const SPRITES = {
   retailer: [
-  // row 0-2: blue cap
-  [_,_,_,_,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,_,_,_,_,_],
-  [_,_,_,PAL.blue2,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue2,_,_,_,_,_],
-  [_,_,PAL.blue2,PAL.blue,PAL.blue,PAL.blue,PAL.white,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue2,_,_,_,_],
-  // row 3-5: face
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin2,PAL.skin2,PAL.skin2,PAL.skin2,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  // row 6: neck
-  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
-  // row 7-10: blue apron body
-  [_,PAL.skin,PAL.skin,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.skin,PAL.skin,_,_,_,_,_],
-  [PAL.white,PAL.white,PAL.blue,PAL.blue,PAL.blue2,PAL.blue,PAL.blue,PAL.blue2,PAL.blue,PAL.white,PAL.white,PAL.skin,_,_,_,_],
-  [_,PAL.skin,PAL.blue,PAL.blue,PAL.blue,PAL.white,PAL.white,PAL.blue,PAL.blue,PAL.skin,PAL.gray,_,_,_,_,_],
-  [_,_,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,_,_,_,_,_,_,_],
-  // row 11-13: legs
-  [_,_,PAL.blue3,PAL.blue3,PAL.blue3,_,_,PAL.blue3,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
-  [_,_,PAL.blue3,PAL.blue3,_,_,_,_,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
-  // row 14-15: shoes
-  [_,_,PAL.blue3,PAL.gray,PAL.gray,_,_,PAL.blue3,PAL.gray,PAL.gray,_,_,_,_,_,_],
-  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,P.b3,P.b3,P.b3,P.b3,P.b3,P.b3,P.b3,_,_,_,_,_,_],
+    [_,_,P.b2,P.b,P.b,P.b,P.b,P.b,P.b,P.b,P.b2,_,_,_,_,_],
+    [_,P.b2,P.b,P.b,P.b,P.b,P.w,P.b,P.b,P.b,P.b,P.b2,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.bk,P.skin,P.skin,P.skin,P.skin,P.bk,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin2,P.skin2,P.skin2,P.skin2,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
+    [_,P.skin,P.skin,P.b,P.b,P.b,P.b,P.b,P.b,P.skin,P.skin,_,_,_,_,_],
+    [P.w,P.w,P.b,P.b,P.b2,P.b,P.b,P.b2,P.b,P.w,P.w,P.skin,_,_,_,_],
+    [_,P.skin,P.b,P.b,P.b,P.w,P.w,P.b,P.b,P.skin,P.gr,_,_,_,_,_],
+    [_,_,P.b,P.b,P.b,P.b,P.b,P.b,P.b,_,_,_,_,_,_,_],
+    [_,_,P.b3,P.b3,P.b3,_,_,P.b3,P.b3,P.b3,_,_,_,_,_,_],
+    [_,_,P.b3,P.b3,_,_,_,_,P.b3,P.b3,_,_,_,_,_,_],
+    [_,_,P.b3,P.gr,P.gr,_,_,P.b3,P.gr,P.gr,_,_,_,_,_,_],
+    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   ],
-
   wholesaler: [
-  [_,_,_,_,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,_,_,_,_,_],
-  [_,_,_,PAL.green2,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green2,_,_,_,_,_],
-  [_,_,PAL.green2,PAL.green,PAL.green,PAL.green,PAL.white,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green2,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,PAL.skin,PAL.black,PAL.black,PAL.skin,PAL.skin,PAL.black,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
-  // vest + clipboard
-  [_,PAL.skin,PAL.skin,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.skin,PAL.skin,_,_,_,_,_],
-  [PAL.white,PAL.white,PAL.green,PAL.green,PAL.green2,PAL.green,PAL.green,PAL.green2,PAL.green,PAL.white,PAL.white,_,_,PAL.white,PAL.white,_],
-  [_,PAL.skin,PAL.green,PAL.green,PAL.green,PAL.white,PAL.white,PAL.green,PAL.green,PAL.skin,_,_,_,PAL.white,PAL.white,_],
-  [_,_,PAL.dark,PAL.dark,PAL.green,PAL.yellow,PAL.green,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.dark,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.gray,_,_,_,_,PAL.gray,PAL.dark,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.yellow,PAL.yellow,_,_,PAL.dark,PAL.yellow,PAL.yellow,_,_,_,_,_,_],
-  [_,_,PAL.gray,PAL.yellow,PAL.yellow,_,_,PAL.gray,PAL.yellow,PAL.yellow,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,P.g3,P.g3,P.g3,P.g3,P.g3,P.g3,P.g3,_,_,_,_,_,_],
+    [_,_,P.g2,P.g,P.g,P.g,P.g,P.g,P.g,P.g,P.g2,_,_,_,_,_],
+    [_,P.g2,P.g,P.g,P.g,P.g,P.w,P.g,P.g,P.g,P.g,P.g2,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.bk,P.bk,P.skin,P.skin,P.bk,P.bk,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin2,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_,_],
+    [_,P.skin,P.skin,P.g,P.g,P.g,P.g,P.g,P.g,P.skin,P.skin,_,_,_,_,_],
+    [P.w,P.w,P.g,P.g,P.g2,P.g,P.g,P.g2,P.g,P.w,P.w,_,_,P.w,P.w,_],
+    [_,P.skin,P.g,P.g,P.g,P.w,P.w,P.g,P.g,P.skin,_,_,_,P.w,P.w,_],
+    [_,_,P.dk,P.dk,P.g,P.y,P.g,P.dk,P.dk,_,_,_,_,_,_,_],
+    [_,_,P.dk,P.gr,P.gr,_,_,P.gr,P.gr,P.dk,_,_,_,_,_,_],
+    [_,_,P.dk,P.gr,_,_,_,_,P.gr,P.dk,_,_,_,_,_,_],
+    [_,_,P.dk,P.y,P.y,_,_,P.dk,P.y,P.y,_,_,_,_,_,_],
+    [_,_,P.gr,P.y,P.y,_,_,P.gr,P.y,P.y,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   ],
-
   distributor: [
-  [_,_,_,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,_,_,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_],
-  // sunglasses
-  [_,_,PAL.skin,PAL.dark,PAL.dark,PAL.dark,PAL.gray,PAL.gray,PAL.dark,PAL.dark,PAL.skin,_,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,_,_,_,_,_,_],
-  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
-  // yellow jacket
-  [_,PAL.skin,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,PAL.skin,_,_,_,_,_],
-  [PAL.white,PAL.white,PAL.yellow,PAL.yellow,PAL.yellow2,PAL.yellow,PAL.yellow,PAL.yellow2,PAL.yellow,PAL.white,PAL.white,_,_,_,_,_],
-  [_,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,_,_,_,_,_,_],
-  [_,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.dark,PAL.yellow,PAL.gold,PAL.yellow,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
-  [_,_,PAL.blue3,PAL.blue3,PAL.gray,_,_,PAL.gray,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
-  [_,_,PAL.blue3,PAL.blue3,_,_,_,_,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
-  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
-  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,P.br,P.br,P.br,P.br,P.br,P.br,P.br,_,_,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.dk,P.dk,P.dk,P.gr,P.gr,P.dk,P.dk,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin2,P.skin,P.skin,P.skin2,P.skin,P.skin,_,_,_,_,_,_],
+    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
+    [_,P.skin,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,P.skin,_,_,_,_,_],
+    [P.w,P.w,P.y2,P.y2,P.y3,P.y2,P.y2,P.y3,P.y2,P.w,P.w,_,_,_,_,_],
+    [_,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,_,_,_,_,_,_],
+    [_,P.skin,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.y2,P.skin,_,_,_,_,_,_],
+    [_,_,P.dk,P.dk,P.y2,P.gd,P.y2,P.dk,P.dk,_,_,_,_,_,_,_],
+    [_,_,P.b3,P.b3,P.gr,_,_,P.gr,P.b3,P.b3,_,_,_,_,_,_],
+    [_,_,P.b3,P.b3,_,_,_,_,P.b3,P.b3,_,_,_,_,_,_],
+    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
+    [_,_,P.gr,P.gr,P.gr,_,_,P.gr,P.gr,P.gr,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   ],
-
   manufacturer: [
-  // red hardhat
-  [_,_,_,_,PAL.red3,PAL.red3,PAL.red3,PAL.red3,PAL.red3,PAL.red3,_,_,_,_,_,_],
-  [_,_,_,PAL.red2,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red2,_,_,_,_,_],
-  [_,_,PAL.red2,PAL.red,PAL.red,PAL.red,PAL.white,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red2,_,_,_,_],
-  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  [_,_,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
-  // beard
-  [_,_,PAL.skin,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.skin,_,_,_,_,_,_],
-  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
-  // red overalls
-  [_,PAL.skin,PAL.skin,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.skin,PAL.skin,_,_,_,_,_],
-  [PAL.gray,PAL.skin,PAL.red,PAL.red,PAL.red2,PAL.red,PAL.red,PAL.red2,PAL.red,PAL.skin,PAL.gray,_,_,_,_,_],
-  [_,PAL.skin,PAL.red,PAL.red,PAL.red,PAL.white,PAL.white,PAL.red,PAL.red,PAL.skin,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.dark,PAL.red,PAL.yellow,PAL.red,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
-  [_,_,PAL.red3,PAL.red3,PAL.red3,_,_,PAL.red3,PAL.red3,PAL.red3,_,_,_,_,_,_],
-  [_,_,PAL.red3,PAL.red3,_,_,_,_,PAL.red3,PAL.red3,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.dark,PAL.gray,_,_,PAL.dark,PAL.dark,PAL.gray,_,_,_,_,_,_],
-  [_,_,PAL.dark,PAL.gray,PAL.gray,_,_,PAL.dark,PAL.gray,PAL.gray,_,_,_,_,_,_],
-  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+    [_,_,_,P.r3,P.r3,P.r3,P.r3,P.r3,P.r3,P.r3,_,_,_,_,_,_],
+    [_,_,P.r2,P.r,P.r,P.r,P.r,P.r,P.r,P.r,P.r2,_,_,_,_,_],
+    [_,P.r2,P.r,P.r,P.r,P.r,P.w,P.r,P.r,P.r,P.r,P.r2,_,_,_,_],
+    [_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.bk,P.skin,P.skin,P.skin,P.skin,P.bk,P.skin,P.skin,_,_,_,_,_],
+    [_,_,P.skin,P.br,P.br,P.br,P.br,P.br,P.br,P.skin,_,_,_,_,_,_],
+    [_,_,_,P.skin,P.skin,P.skin,P.skin,P.skin,P.skin,_,_,_,_,_,_,_],
+    [_,P.skin,P.skin,P.r,P.r,P.r,P.r,P.r,P.r,P.skin,P.skin,_,_,_,_,_],
+    [P.gr,P.skin,P.r,P.r,P.r2,P.r,P.r,P.r2,P.r,P.skin,P.gr,_,_,_,_,_],
+    [_,P.skin,P.r,P.r,P.r,P.w,P.w,P.r,P.r,P.skin,_,_,_,_,_,_],
+    [_,_,P.dk,P.dk,P.r,P.gd,P.r,P.dk,P.dk,_,_,_,_,_,_,_],
+    [_,_,P.r3,P.r3,P.r3,_,_,P.r3,P.r3,P.r3,_,_,_,_,_,_],
+    [_,_,P.r3,P.r3,_,_,_,_,P.r3,P.r3,_,_,_,_,_,_],
+    [_,_,P.dk,P.dk,P.gr,_,_,P.dk,P.dk,P.gr,_,_,_,_,_,_],
+    [_,_,P.dk,P.gr,P.gr,_,_,P.dk,P.gr,P.gr,_,_,_,_,_,_],
+    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
   ],
 }
 
-function drawSprite(canvasId, roleName) {
-  const canvas = document.getElementById(canvasId)
-  if (!canvas) return
-  const ctx = canvas.getContext('2d')
-  ctx.clearRect(0,0,canvas.width,canvas.height)
-  const data = SPRITES[roleName]
+function drawSprite(canvasId, role, scale=1) {
+  const c = document.getElementById(canvasId)
+  if (!c) return
+  const ctx = c.getContext('2d')
+  ctx.clearRect(0, 0, c.width, c.height)
+  const data = SPRITES[role]
   if (!data) return
-  const pw = canvas.width / 16
-  const ph = canvas.height / 16
+  const pw = c.width / 16
+  const ph = c.height / 16
   for (let r=0; r<16; r++) {
-    for (let c=0; c<16; c++) {
-      const col = data[r]?.[c]
-      if (col && col !== '') {
-        ctx.fillStyle = col
-        ctx.fillRect(c*pw, r*ph, pw, ph)
+    for (let col=0; col<16; col++) {
+      const color = data[r]?.[col]
+      if (color) {
+        ctx.fillStyle = color
+        ctx.fillRect(col*pw, r*ph, pw, ph)
       }
     }
   }
 }
 
-// ── GAME CONFIG ──────────────────────────────────────────────────
+// ── 角色設定 ──────────────────────────────────────────────────────
 const ROLES = ['retailer','wholesaler','distributor','manufacturer']
 const ROLE_CFG = {
-  retailer:    { name:'RETAILER',    zh:'零售商', color:'#4fc3f7', threshold:150, order:'ORDER TO WHOLESALER', hints:{5:'DEMAND SPIKED! ADJUST SAFETY STOCK',10:'ARE YOU OVER-ORDERING?',16:'GAME ENDING SOON'} },
-  wholesaler:  { name:'WHOLESALER',  zh:'批发商', color:'#69f0ae', threshold:200, order:'ORDER TO DISTRIBUTOR', hints:{5:'RETAILERS PANICKING? STAY CALM',8:'BULLWHIP IN ACTION!',15:'PIPELINE FULL? REDUCE ORDERS'} },
-  distributor: { name:'DISTRIBUTOR', zh:'分销商', color:'#ffd740', threshold:250, order:'ORDER TO MANUFACTURER', hints:{5:'SMOOTH YOUR ORDERS — BE THE BUFFER',10:'LESS VOLATILE THAN WHOLESALER?',15:'HOLD STEADY LAST 5 WEEKS'} },
-  manufacturer:{ name:'MANUFACTURER',zh:'制造商', color:'#ff6e6e', threshold:300, order:'SET PRODUCTION QTY', hints:{5:'DEMAND SIGNAL DISTORTED — STAY STABLE',10:'STEADY PRODUCTION = LOWER COST',15:'DONT OVERPRODUCE NOW'} },
+  retailer: {
+    name:'零售商', emoji:'🏪', color:'var(--blue)',
+    title:'超市店長・直面消費者',
+    mission:'你經營一家啤酒超市。消費者每週來買啤酒，你要確保貨架有貨。\n沒貨 = 客人流失（缺貨成本高）\n太多 = 倉儲費用（庫存成本）\n你每週向批發商下單，2週後才到貨。',
+    canSee:['自己的庫存','消費者本週需求','積壓訂單','在途貨物'],
+    cantSee:['批發商庫存','任何上游資訊','未來需求'],
+    victory:'總成本最低，且缺貨週數為零',
+    victoryColor:'var(--blue)', threshold:150,
+    tip:'前4週需求穩定約4箱。第5週需求會跳升，提早備貨！',
+    orderLabel:'你要向批發商下幾箱？',
+    demandLabel:'消費者需求',
+    hints:{5:'⚠️ 消費者需求跳升了！快調整安全庫存。',10:'你的下單量是否遠超實際需求？',16:'遊戲快結束，多餘庫存仍要付成本。'},
+  },
+  wholesaler: {
+    name:'批發商', emoji:'📦', color:'var(--green)',
+    title:'倉儲經理・中間供應商',
+    mission:'你管理一座批發倉庫，服務零售商。\n收到零售商訂單後出貨，庫存不足則積壓。\n你向分銷商補貨，同樣2週才到。\n你看不到零售商的庫存，也不知道消費者真實需求。',
+    canSee:['自己的庫存','零售商本週訂單量','積壓訂單','在途貨物'],
+    cantSee:['零售商的庫存','消費者真實需求','分銷商庫存'],
+    victory:'總成本最低，對零售商滿足率≥95%',
+    victoryColor:'var(--green)', threshold:200,
+    tip:'零售商訂單 ≠ 消費者真實需求。他們可能在恐慌性過度下單，別跟著被帶跑！',
+    orderLabel:'你要向分銷商下幾箱？',
+    demandLabel:'零售商訂單',
+    hints:{5:'零售商大量下單？先觀察，別立刻暴增補貨。',8:'你的訂單是零售商的幾倍？這就是牛鞭效應！',15:'庫存過多？可以減少下單，消化在途的貨。'},
+  },
+  distributor: {
+    name:'分銷商', emoji:'🚛', color:'var(--yellow)',
+    title:'配送中心・物流樞紐',
+    mission:'你管理一個區域配送中心，連結工廠與批發商。\n你的訂單已經過兩層轉手，波動被放大了。\n向製造商下單，2週後到貨。\n完全不知道零售商或消費者的狀況。',
+    canSee:['自己的庫存','批發商本週訂單量','積壓訂單','在途貨物'],
+    cantSee:['批發商庫存','零售商資訊','消費者需求'],
+    victory:'總成本最低，訂單波動比批發商小',
+    victoryColor:'var(--yellow)', threshold:250,
+    tip:'嘗試「平滑」你的下單量，而非跟著批發商的波動走。設定目標庫存水位來決策！',
+    orderLabel:'你要向製造商下幾箱？',
+    demandLabel:'批發商訂單',
+    hints:{5:'批發商訂單波動？設定目標庫存，用公式下單。',10:'你能比批發商更平穩嗎？你是穩定器！',15:'最後五週，維持穩定節奏。'},
+  },
+  manufacturer: {
+    name:'製造商', emoji:'🏭', color:'var(--red)',
+    title:'工廠廠長・供應鏈源頭',
+    mission:'你是啤酒工廠的生產經理。\n你不向上游訂貨，而是決定每週「生產多少箱」。\n生產指令下達後，2週後完工入庫。\n你是整條供應鏈的源頭，但看不到任何下游狀況。',
+    canSee:['成品庫存','分銷商本週訂單量','生產線上的數量','積壓訂單'],
+    cantSee:['分銷商庫存','更下游的一切','消費者需求'],
+    victory:'總成本最低，生產量變動最小',
+    victoryColor:'var(--red)', threshold:300,
+    tip:'牛鞭效應在你這裡感受最強烈。維持平穩生產比大增大減更有效！',
+    orderLabel:'你要生產幾箱？',
+    demandLabel:'分銷商訂單',
+    hints:{5:'分銷商訂單跳了？先看：你手上有多少庫存和在產的貨？',10:'生產量是否剧烈波動？平穩生產是關鍵。',15:'快結束了，大量增產會在第20週變成高庫存成本。'},
+  },
 }
 
 const MODE_LABELS = {
-  summer:'☀ SUMMER PEAK',winter:'❄ WINTER SURGE',bimodal:'◆ DOUBLE PEAK',shock:'⚡ DEMAND SHOCK'
+  summer:'☀️ 夏季旺季型',winter:'❄️ 冬季旺季型',bimodal:'📈 雙峰型',shock:'⚡ 突發衝擊型'
 }
 const MODE_DESCS = {
-  summer:'HIGH DEMAND WKS 6-14 THEN DROPS',
-  winter:'DEMAND RISES FROM WK 12 ONWARD',
-  bimodal:'TWO PEAKS: WK4-7 AND WK14-17',
-  shock:'ONE BIG SPIKE THEN FALLS FAST'
+  summer:'第6-14週進入需求高峰，旺季結束後回落。考驗你的提前備貨能力。',
+  winter:'第12週起需求持續走高，越到後期壓力越大。',
+  bimodal:'兩次需求高峰（第4-7週與第14-17週），中間有低谷，考驗庫存調配。',
+  shock:'某一週需求突然暴增，之後迅速回落，考驗應變能力。'
 }
 
 function genDemand() {
@@ -613,7 +662,7 @@ function initState(demandData){
 }
 
 function processWeek(state,orders){
-  const week=state.week, cd=state.curve[week-1], newRoles={}, snap={}
+  const week=state.week,cd=state.curve[week-1],newRoles={},snap={}
   const recv={};for(const r of ROLES)recv[r]=state.roles[r].pipeline[0]
   const inv={};for(const r of ROLES)inv[r]=state.roles[r].inventory+recv[r]
   const inc={retailer:cd,wholesaler:orders.retailer,distributor:orders.wholesaler,manufacturer:orders.distributor}
@@ -630,340 +679,354 @@ function processWeek(state,orders){
 
 function autoOrder(role,state){
   const rs=state.roles[role],it=rs.pipeline[0]+rs.pipeline[1]
-  return Math.max(0,Math.round(16-rs.inventory-it+rs.backlog))
+  return Math.max(0,Math.round(14-rs.inventory-it+rs.backlog))
 }
 
-// ── STATE ────────────────────────────────────────────────────────
-let gameState=null, activeRole=null, lastSnap=null
-let timerInterval=null, timeLeft=60
-let histInv=[], histOrd=[], histCost=[]
-let hiScores = JSON.parse(localStorage.getItem('beerHiScores')||'[]')
+// ── 狀態 ─────────────────────────────────────────────────────────
+let gameState=null,activeRole=null,lastSnap=null
+let timerInt=null,timeLeft=60
+let histInv=[],histOrd=[],histCost=[]
+let hiScores=JSON.parse(localStorage.getItem('beerHi2')||'[]')
 
-// ── SCREENS ──────────────────────────────────────────────────────
+// ── 畫面切換 ─────────────────────────────────────────────────────
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))
   document.getElementById('screen-'+id).classList.add('active')
+  window.scrollTo(0,0)
 }
 
-// ── HOME SCREEN ──────────────────────────────────────────────────
+// ── 首頁 ─────────────────────────────────────────────────────────
 function initHome(){
-  // Draw all sprites
-  const roles=['retailer','wholesaler','distributor','manufacturer']
-  roles.forEach(r=>drawSprite('spr-'+r+'-home',r))
-
-  // Role buttons
-  const container=document.getElementById('role-buttons')
-  container.innerHTML=''
-  const roleData=[
-    {r:'retailer',    c:'var(--retailer)', label:'🏪 RETAILER    [STORE CLERK]',    th:150},
-    {r:'wholesaler',  c:'var(--wholesale)',label:'📦 WHOLESALER  [WAREHOUSE MGR]',   th:200},
-    {r:'distributor', c:'var(--dist)',     label:'🚛 DISTRIBUTOR [TRUCK DRIVER]',    th:250},
-    {r:'manufacturer',c:'var(--mfg)',      label:'🏭 MANUFACTURER[PLANT ENGINEER]',  th:300},
-  ]
-  roleData.forEach(({r,c,label,th})=>{
-    const btn=document.createElement('button')
-    btn.className='px-btn'
-    btn.style.cssText=`border-color:${c};color:${c};font-size:0.35rem;padding:10px 12px;text-align:left;box-shadow:3px 3px 0 #000`
-    btn.innerHTML=`${label}<span style="float:right;color:var(--dim)">TARGET&lt;$${th}</span>`
-    btn.onclick=()=>startGame(r)
-    container.appendChild(btn)
+  const list=document.getElementById('role-list')
+  list.innerHTML=''
+  ROLES.forEach(role=>{
+    const cfg=ROLE_CFG[role]
+    const div=document.createElement('div')
+    div.className='card role-card slide-in'
+    div.style.cssText=`border-color:${cfg.color.replace('var(--','').replace(')','')};border-left:4px solid`
+    div.style.borderLeftColor=cfg.color
+    div.innerHTML=`
+      <canvas id="home-spr-${role}" width="40" height="48" style="width:40px;height:48px;image-rendering:pixelated;flex-shrink:0" class="float"></canvas>
+      <div style="flex:1">
+        <div style="font-size:0.95rem;font-weight:900;color:${cfg.color}">${cfg.emoji} ${cfg.name}</div>
+        <div style="font-size:0.68rem;color:var(--dim);margin-top:2px">${cfg.title}</div>
+        <div style="font-size:0.65rem;color:var(--dim);margin-top:4px">目標成本 &lt;$${cfg.threshold}</div>
+      </div>
+      <div style="font-size:1.2rem;color:var(--dim)">▶</div>
+    `
+    div.onclick=()=>showRoleCard(role)
+    list.appendChild(div)
+    setTimeout(()=>drawSprite('home-spr-'+role, role), 50)
   })
 
-  // Hi scores
+  // 最高紀錄
   const el=document.getElementById('hiscore-list')
-  if(hiScores.length===0){el.textContent='NO RECORDS YET';return}
-  el.innerHTML=hiScores.slice(0,5).map((s,i)=>
-    `<div>${String(i+1).padStart(2,'0')} ${s.role.toUpperCase().padEnd(12)} $${s.cost.toFixed(1).padStart(6)}</div>`
-  ).join('')
+  if(hiScores.length===0){el.innerHTML='<span style="color:var(--dim)">尚無紀錄，快來創下第一筆！</span>';return}
+  el.innerHTML=hiScores.slice(0,5).map((s,i)=>`
+    <div style="display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid var(--border)">
+      <span>${['🥇','🥈','🥉','4️⃣','5️⃣'][i]} ${ROLE_CFG[s.role]?.name||s.role}</span>
+      <span style="color:${s.cost<ROLE_CFG[s.role]?.threshold?'var(--green)':'var(--red)'}">$${s.cost.toFixed(1)}</span>
+    </div>
+  `).join('')
 }
 
-// ── START GAME ───────────────────────────────────────────────────
-function startGame(role){
+// ── 角色介紹 ─────────────────────────────────────────────────────
+function showRoleCard(role){
   activeRole=role
+  const cfg=ROLE_CFG[role]
+
+  document.getElementById('rc-name').textContent=`${cfg.emoji} ${cfg.name}`
+  document.getElementById('rc-name').style.color=cfg.color
+  document.getElementById('rc-title').textContent=cfg.title
+  document.getElementById('rc-mission').textContent=cfg.mission
+  document.getElementById('rc-cansee').innerHTML=cfg.canSee.map(s=>`<div>✓ ${s}</div>`).join('')
+  document.getElementById('rc-cantsee').innerHTML=cfg.cantSee.map(s=>`<div>✗ ${s}</div>`).join('')
+  document.getElementById('rc-victory').textContent=cfg.victory
+  document.getElementById('rc-victory').style.color=cfg.victoryColor
+  document.getElementById('rc-tip').textContent=cfg.tip
+  document.getElementById('rc-start-btn').style.borderColor=cfg.color
+  document.getElementById('rc-start-btn').style.color=cfg.color
+
+  const canvas=document.getElementById('rc-sprite')
+  setTimeout(()=>drawSprite('rc-sprite',role),50)
+
+  showScreen('rolecard')
+}
+
+// ── 進入遊戲 ─────────────────────────────────────────────────────
+function enterGame(){
   const demand=genDemand()
   gameState=initState(demand)
   lastSnap=null
   histInv=[];histOrd=[];histCost=[]
 
-  // Setup game screen
-  const cfg=ROLE_CFG[role]
-  document.getElementById('hud-role').textContent=cfg.name
+  const cfg=ROLE_CFG[activeRole]
+  document.getElementById('hud-role').textContent=`${cfg.emoji} ${cfg.name}`
   document.getElementById('hud-role').style.color=cfg.color
-  document.getElementById('game-role-name').textContent=cfg.name
-  document.getElementById('game-role-name').style.color=cfg.color
-  document.getElementById('order-label').textContent='▶ '+cfg.order
-  document.getElementById('order-label').style.color=cfg.color
-  drawSprite('game-sprite',role)
+  document.getElementById('action-title').textContent=`📦 ${cfg.orderLabel}`
+  document.getElementById('g-demand-label').textContent=cfg.demandLabel
 
+  setTimeout(()=>drawSprite('g-sprite-small',activeRole),50)
   updateGameUI()
   showScreen('game')
   startTimer()
-
-  // Update ticker
-  document.getElementById('ticker-text').textContent=
-    `▸ PLAYING AS ${cfg.name} ▸ LEAD TIME: 2 WKS ▸ TARGET: <$${cfg.threshold} ▸ WEEK 1/20 ▸ GOOD LUCK! ▸`
 }
 
-// ── TIMER ────────────────────────────────────────────────────────
+// ── 計時器 ───────────────────────────────────────────────────────
 function startTimer(){
-  clearInterval(timerInterval)
+  clearInterval(timerInt)
   timeLeft=60
-  updateTimerUI()
-  timerInterval=setInterval(()=>{
+  const el=document.getElementById('hud-timer')
+  el.classList.add('blink')
+  timerInt=setInterval(()=>{
     timeLeft--
-    updateTimerUI()
-    if(timeLeft<=0){
-      clearInterval(timerInterval)
-      // auto submit last order
-      const h=gameState.roles[activeRole].history
-      const lastOrd=h.length>0?h[h.length-1].order:4
-      doSubmit(lastOrd)
-    }
+    el.textContent=timeLeft
+    el.style.color=timeLeft<=10?'var(--red)':timeLeft<=20?'var(--yellow)':'var(--gold)'
+    if(timeLeft<=0){clearInterval(timerInt);const h=gameState.roles[activeRole].history;doSubmit(h.length>0?h[h.length-1].order:4)}
   },1000)
 }
 
-function updateTimerUI(){
-  const el=document.getElementById('hud-timer')
-  el.textContent=String(timeLeft).padStart(2,'0')
-  el.style.color=timeLeft<=10?'var(--red)':timeLeft<=20?'var(--dist)':'var(--gold)'
-  const bar=document.getElementById('timer-bar')
-  bar.style.width=(timeLeft/60*100)+'%'
-  if(timeLeft<=10) bar.style.background='repeating-linear-gradient(90deg,var(--red) 0px,var(--red) 4px,transparent 4px,transparent 8px)'
+// ── 更新畫面 ─────────────────────────────────────────────────────
+function updateGameUI(){
+  const rs=gameState.roles[activeRole]
+  const week=gameState.week
+  const cfg=ROLE_CFG[activeRole]
+
+  // HUD
+  document.getElementById('hud-week-label').textContent=`第 ${week} 週 / 共 20 週`
+  document.getElementById('hud-cost').textContent=`$${rs.cost.toFixed(1)}`
+  document.getElementById('hud-timer').textContent=timeLeft
+
+  // 狀態
+  const inv=document.getElementById('g-inv')
+  inv.textContent=rs.inventory
+  inv.style.color=rs.inventory===0?'var(--red)':rs.inventory<5?'var(--yellow)':'var(--green)'
+
+  document.getElementById('g-back').textContent=`${rs.backlog} 箱`
+  document.getElementById('g-back').style.color=rs.backlog>0?'var(--red)':'var(--dim)'
+  document.getElementById('g-pipe').textContent=`${rs.pipeline[0]+rs.pipeline[1]} 箱`
+
+  // 本週到貨 & 需求（從上週結算取得）
+  if(lastSnap){
+    const s=lastSnap[activeRole]
+    document.getElementById('g-recv').textContent=`+${s.received}`
+    document.getElementById('g-recv').style.color=s.received>0?'var(--blue)':'var(--dim)'
+    document.getElementById('g-demand').textContent=s.demand
+    // 成本小結
+    document.getElementById('g-cost-detail').style.display='block'
+    document.getElementById('g-hc').textContent=`$${s.hc.toFixed(2)}`
+    document.getElementById('g-sc').textContent=`$${s.sc.toFixed(2)}`
+    document.getElementById('g-wc').textContent=`$${s.wc.toFixed(2)}`
+  } else {
+    document.getElementById('g-recv').textContent='—'
+    document.getElementById('g-demand').textContent='—'
+  }
+
+  // 快速選鈕（上週 / 建議 / 0）
+  const lastOrd=rs.history.length>0?rs.history[rs.history-1]?.order:null
+  const suggested=Math.max(0,Math.round(12-rs.inventory-(rs.pipeline[0]+rs.pipeline[1])+rs.backlog+4))
+  const quickEl=document.getElementById('quick-btns')
+  quickEl.innerHTML=''
+  const btns=[
+    {label:`建議 ${suggested}箱`,val:suggested,style:'color:var(--green);border-color:var(--green)'},
+    {label:`維持 4箱`,val:4,style:'color:var(--dim);border-color:var(--border)'},
+    {label:`0箱`,val:0,style:'color:var(--red);border-color:var(--red)'},
+  ]
+  btns.forEach(b=>{
+    const btn=document.createElement('button')
+    btn.style.cssText=`font-family:inherit;font-size:0.7rem;padding:6px 10px;border:1.5px solid;background:var(--panel);cursor:pointer;${b.style}`
+    btn.textContent=b.label
+    btn.onclick=()=>{document.getElementById('order-input').value=b.val;document.getElementById('order-input').focus()}
+    quickEl.appendChild(btn)
+  })
+
+  // 提示
+  const hint=cfg.hints[week]
+  const hintBox=document.getElementById('g-hint')
+  if(hint){hintBox.style.display='block';document.getElementById('g-hint-text').textContent='💡 '+hint}
+  else hintBox.style.display='none'
+
+  // 圖表
+  renderChart('chart-inv', histInv, '#4fc3f7')
+  renderChart('chart-ord', histOrd, '#fbbf24')
+  renderChart('chart-cost', histCost, '#f87171')
+
+  if(histInv.length>0){
+    document.getElementById('chart-inv-now').textContent=histInv[histInv.length-1]+'箱'
+    document.getElementById('chart-ord-now').textContent=histOrd[histOrd.length-1]+'箱'
+    document.getElementById('chart-cost-now').textContent='$'+histCost[histCost.length-1]?.toFixed(1)
+  }
+
+  // 動作區顯示
+  document.getElementById('action-zone').style.display='block'
+  document.getElementById('waiting-zone').style.display='none'
+  document.getElementById('order-input').value=''
+  document.getElementById('order-input').focus()
 }
 
-// ── SUBMIT ───────────────────────────────────────────────────────
+function renderChart(id, data, color){
+  const el=document.getElementById(id)
+  el.innerHTML=''
+  if(data.length===0) return
+  const max=Math.max(...data,1)
+  data.forEach(v=>{
+    const bar=document.createElement('div')
+    bar.className='pixel-bar'
+    bar.style.cssText=`height:${Math.max(3,Math.round((v/max)*100))}%;background:${color};opacity:${0.4+0.6*(v/max)}`
+    el.appendChild(bar)
+  })
+  // 填滿空位
+  for(let i=data.length;i<20;i++){
+    const empty=document.createElement('div')
+    empty.className='pixel-bar'
+    empty.style.cssText=`height:2px;background:${color};opacity:0.1`
+    el.appendChild(empty)
+  }
+}
+
+// ── 提交決策 ─────────────────────────────────────────────────────
 function submitOrder(){
   const val=parseInt(document.getElementById('order-input').value)
   if(isNaN(val)||val<0)return
-  clearInterval(timerInterval)
+  clearInterval(timerInt)
+  document.getElementById('hud-timer').classList.remove('blink')
   doSubmit(val)
 }
 
 function doSubmit(qty){
-  // Show submitted state
-  document.getElementById('order-panel').style.display='none'
-  document.getElementById('submitted-panel').style.display='block'
-  document.getElementById('stat-order').textContent=qty
-  document.getElementById('submit-progress').textContent='PROCESSING...'
+  document.getElementById('action-zone').style.display='none'
+  document.getElementById('waiting-zone').style.display='block'
+  document.getElementById('submitted-qty').textContent=qty
 
-  // AI fills other roles
   const ao={}
   for(const r of ROLES) if(r!==activeRole) ao[r]=autoOrder(r,gameState)
   const allOrders={...ao,[activeRole]:qty}
 
   setTimeout(()=>{
-    const{newState,snap,cd}=processWeek(gameState,allOrders)
-    gameState=newState
-    lastSnap=snap
+    const{newState,snap}=processWeek(gameState,allOrders)
+    gameState=newState; lastSnap=snap
 
-    // Update history
-    const mySnap=snap[activeRole]
-    histInv.push(mySnap.inventory)
-    histOrd.push(mySnap.order)
-    histCost.push(mySnap.cost)
+    const s=snap[activeRole]
+    histInv.push(s.inventory)
+    histOrd.push(s.order)
+    histCost.push(s.cost)
 
-    // Check finished
-    if(newState.status==='finished'){
-      clearInterval(timerInterval)
-      showDebrief()
-      return
-    }
-
-    // Next week
-    document.getElementById('order-panel').style.display='block'
-    document.getElementById('submitted-panel').style.display='none'
-    document.getElementById('order-input').value=''
+    if(newState.status==='finished'){showDebrief();return}
     updateGameUI()
     startTimer()
-
-    // Hint
-    const hint=ROLE_CFG[activeRole].hints[newState.week]
-    const hintBox=document.getElementById('hint-box')
-    if(hint){hintBox.style.display='block';document.getElementById('hint-text').textContent='▸ TIP: '+hint}
-    else hintBox.style.display='none'
-
-    // Ticker update
-    document.getElementById('ticker-text').textContent=
-      `▸ WEEK ${newState.week}/20 ▸ COST: $${mySnap.cost.toFixed(1)} ▸ INV: ${mySnap.inventory} ▸ ORDER: ${mySnap.order} ▸`
-  }, 600)
+  },500)
 }
 
-// ── UPDATE UI ────────────────────────────────────────────────────
-function updateGameUI(){
-  const rs=gameState.roles[activeRole]
-  const week=gameState.week
-  document.getElementById('hud-week').textContent=String(week).padStart(2,'0')
-  document.getElementById('hud-cost').textContent=rs.cost.toFixed(1)
-  document.getElementById('stat-inv').textContent=rs.inventory
-  document.getElementById('stat-inv').style.color=rs.inventory<4?'var(--red)':rs.inventory>20?'var(--dist)':'var(--green)'
-  document.getElementById('stat-back').textContent=rs.backlog
-  document.getElementById('stat-back').style.color=rs.backlog>0?'var(--red)':'var(--green)'
-  document.getElementById('stat-pipe').textContent=rs.pipeline[0]+rs.pipeline[1]
-  document.getElementById('stat-order').textContent='—'
-
-  // Stars
-  const pct=rs.cost/ROLE_CFG[activeRole].threshold
-  const stars=pct<0.5?'★★★':pct<0.8?'★★☆':'★☆☆'
-  document.getElementById('game-stars').textContent=stars
-
-  if(lastSnap){
-    const s=lastSnap[activeRole]
-    document.getElementById('info-recv').textContent=`+${s.received} BOX`
-    document.getElementById('info-demand').textContent=`${s.demand} BOX`
-    document.getElementById('info-wkcost').textContent=`$${s.wc.toFixed(2)}`
-  }
-
-  // Charts
-  renderPixelChart('chart-inv', histInv, '#4fc3f7', 20)
-  renderPixelChart('chart-ord', histOrd, '#ffd740', 20)
-  renderPixelChart('chart-cost',histCost,'#ff6e6e', 300)
-}
-
-function renderPixelChart(id, data, color, maxVal){
-  const container=document.getElementById(id)
-  container.innerHTML=''
-  const max=Math.max(...data,maxVal*0.1,1)
-  data.forEach((v,i)=>{
-    const bar=document.createElement('div')
-    bar.className='chart-bar'
-    const h=Math.max(2,Math.round((v/max)*100))+'%'
-    bar.style.cssText=`height:${h};background:${color};opacity:${0.5+0.5*(v/max)};` +
-      `box-shadow:0 0 ${Math.round(v/max*6)}px ${color};` +
-      `image-rendering:pixelated`
-    // Pixel step effect
-    bar.style.clipPath='inset(0)'
-    container.appendChild(bar)
-  })
-}
-
-// ── DEBRIEF ──────────────────────────────────────────────────────
+// ── 複盤 ─────────────────────────────────────────────────────────
 function showDebrief(){
   showScreen('debrief')
 
-  // Demand reveal
-  document.getElementById('demand-mode-label').textContent=MODE_LABELS[gameState.mode]||gameState.mode.toUpperCase()
-  document.getElementById('demand-mode-desc').textContent=MODE_DESCS[gameState.mode]||''
+  document.getElementById('db-mode').textContent=MODE_LABELS[gameState.mode]||gameState.mode
+  document.getElementById('db-mode-desc').textContent=MODE_DESCS[gameState.mode]||''
+  document.getElementById('db-base').textContent=gameState.base
+  document.getElementById('db-peak').textContent=gameState.peak
 
-  // Rankings
   const res={}
   for(const r of ROLES) res[r]={cost:gameState.roles[r].cost,history:gameState.roles[r].history}
-  const sorted=[...ROLES].sort((a,b)=>res[a].cost-res[b].cost)
   const teamTotal=ROLES.reduce((s,r)=>s+res[r].cost,0)
+  const myCost=res[activeRole].cost
+  const myThreshold=ROLE_CFG[activeRole].threshold
 
-  const rankEl=document.getElementById('rankings')
+  document.getElementById('db-cost').textContent=`$${myCost.toFixed(1)}`
+  document.getElementById('db-cost').style.color=myCost<myThreshold?'var(--green)':'var(--red)'
+  const verdict=document.getElementById('db-verdict')
+  if(myCost<myThreshold*0.7){verdict.textContent='🌟 完美！遠超優秀標準！';verdict.style.color='var(--gold)'}
+  else if(myCost<myThreshold){verdict.textContent='✅ 達到優秀標準！';verdict.style.color='var(--green)'}
+  else if(myCost<myThreshold*1.3){verdict.textContent='⚠️ 接近目標，繼續練習！';verdict.style.color='var(--yellow)'}
+  else{verdict.textContent='❌ 目標未達，再試一次！';verdict.style.color='var(--red)'}
+
+  // 排名
+  const sorted=[...ROLES].sort((a,b)=>res[a].cost-res[b].cost)
+  const rankEl=document.getElementById('db-rankings')
   rankEl.innerHTML=''
   sorted.forEach((role,i)=>{
-    const cfg=ROLE_CFG[role],r=res[role]
-    const isMe=role===activeRole
+    const cfg=ROLE_CFG[role],r=res[role],isMe=role===activeRole
     const div=document.createElement('div')
-    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px;border:${isMe?'3px':'1px'} solid ${cfg.color};background:${isMe?cfg.color+'22':'#000'}`
-    const stars=r.cost<cfg.threshold?'★★★':r.cost<cfg.threshold*1.3?'★★☆':'★☆☆'
+    div.style.cssText=`display:flex;align-items:center;gap:10px;padding:10px;margin-bottom:8px;background:${isMe?'#001a00':'var(--panel)'};border:${isMe?'2px solid var(--green)':'1px solid var(--border)'}`
     div.innerHTML=`
-      <div style="font-size:0.5rem;color:var(--gold);min-width:20px">#${i+1}</div>
-      <canvas id="rank-spr-${role}" width="24" height="32" style="width:24px;height:32px;image-rendering:pixelated"></canvas>
+      <div style="font-size:1.1rem;min-width:24px">${['🥇','🥈','🥉','4️⃣'][i]}</div>
+      <canvas id="db-spr-${role}" width="28" height="36" style="width:28px;height:36px;image-rendering:pixelated;flex-shrink:0"></canvas>
       <div style="flex:1">
-        <div style="font-size:0.32rem;color:${cfg.color}">${cfg.name}${isMe?' ◀YOU':''}</div>
-        <div style="font-size:0.25rem;color:var(--dim);margin-top:2px">${stars}</div>
+        <div style="font-size:0.82rem;font-weight:700;color:${cfg.color}">${cfg.emoji} ${cfg.name}${isMe?' ← 你':''}</div>
+        <div style="font-size:0.65rem;color:var(--dim);margin-top:2px">目標 &lt;$${cfg.threshold}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:0.4rem;color:${r.cost<cfg.threshold?'var(--green)':'var(--text)'}">$${r.cost.toFixed(1)}</div>
-        ${r.cost<cfg.threshold?'<div style="font-size:0.22rem;color:var(--green)">EXCELLENT!</div>':''}
+        <div style="font-size:1rem;font-weight:900;color:${r.cost<cfg.threshold?'var(--green)':'var(--red)'}">$${r.cost.toFixed(1)}</div>
+        ${r.cost<cfg.threshold?'<div style="font-size:0.6rem;color:var(--green)">✅ 優秀</div>':''}
       </div>
     `
     rankEl.appendChild(div)
-    setTimeout(()=>drawSprite('rank-spr-'+role,role),50)
+    setTimeout(()=>drawSprite('db-spr-'+role,role),50)
   })
 
-  // Score cards
-  const sc=document.getElementById('score-cards')
-  sc.innerHTML=`
-    <div class="px-box" style="padding:8px;text-align:center">
-      <div style="font-size:0.28rem;color:var(--dim)">TEAM TOTAL</div>
-      <div style="font-size:0.6rem;color:${teamTotal<700?'var(--green)':'var(--red)'}">$${teamTotal.toFixed(0)}</div>
-      <div style="font-size:0.25rem;color:var(--dim)">TARGET &lt;$700</div>
-    </div>
-    <div class="px-box" style="padding:8px;text-align:center">
-      <div style="font-size:0.28rem;color:var(--dim)">YOUR COST</div>
-      <div style="font-size:0.6rem;color:${res[activeRole].cost<ROLE_CFG[activeRole].threshold?'var(--green)':'var(--dist)'}">$${res[activeRole].cost.toFixed(0)}</div>
-      <div style="font-size:0.25rem;color:var(--dim)">TARGET &lt;$${ROLE_CFG[activeRole].threshold}</div>
-    </div>
-  `
-
-  // Bullwhip canvas chart
+  // 牛鞭效應圖
   const canvas=document.getElementById('bullwhip-canvas')
   const ctx=canvas.getContext('2d')
-  ctx.clearRect(0,0,400,120)
+  ctx.clearRect(0,0,440,130)
 
   const allData={
-    consumer: gameState.curve,
-    retailer: res.retailer.history.map(w=>w.order),
-    wholesaler: res.wholesaler.history.map(w=>w.order),
-    distributor: res.distributor.history.map(w=>w.order),
-    manufacturer: res.manufacturer.history.map(w=>w.order),
+    consumer:gameState.curve,
+    retailer:res.retailer.history.map(w=>w.order),
+    wholesaler:res.wholesaler.history.map(w=>w.order),
+    distributor:res.distributor.history.map(w=>w.order),
+    manufacturer:res.manufacturer.history.map(w=>w.order),
   }
-  const colors={'consumer':'#555','retailer':'#4fc3f7','wholesaler':'#69f0ae','distributor':'#ffd740','manufacturer':'#ff6e6e'}
-  const allVals=[].concat(...Object.values(allData))
-  const maxV=Math.max(...allVals,1)
+  const colors={consumer:'#555',retailer:'#4fc3f7',wholesaler:'#4ade80',distributor:'#fbbf24',manufacturer:'#f87171'}
+  const maxV=Math.max(...Object.values(allData).flat(),1)
+
+  // 網格
+  ctx.strokeStyle='#1a1a2e';ctx.lineWidth=1
+  for(let i=0;i<=4;i++){ctx.beginPath();ctx.moveTo(0,i*30);ctx.lineTo(440,i*30);ctx.stroke()}
 
   Object.entries(allData).forEach(([key,data])=>{
     if(!data||data.length===0)return
-    ctx.strokeStyle=colors[key]
-    ctx.lineWidth=2
-    ctx.shadowColor=colors[key]
-    ctx.shadowBlur=4
+    ctx.strokeStyle=colors[key];ctx.lineWidth=key==='consumer'?1.5:2
+    ctx.shadowColor=colors[key];ctx.shadowBlur=key==='consumer'?0:5
     ctx.beginPath()
     data.forEach((v,i)=>{
-      const x=(i/(data.length-1))*396+2
-      const y=110-((v/maxV)*100)
+      const x=(i/(Math.max(data.length-1,1)))*436+2
+      const y=122-((v/maxV)*110)
       i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
     })
     ctx.stroke()
+    ctx.shadowBlur=0
   })
 
-  // Grid lines (pixel style)
-  ctx.shadowBlur=0
-  ctx.strokeStyle='#1a1a2e'
-  ctx.lineWidth=1
-  for(let i=0;i<=4;i++){
-    ctx.beginPath()
-    ctx.moveTo(0,i*30)
-    ctx.lineTo(400,i*30)
-    ctx.stroke()
-  }
-
-  // Lesson text
-  const bullwhipFactor=(Math.max(...allData.manufacturer||[1])/Math.max(...(gameState.curve||[1]))).toFixed(1)
-  document.getElementById('lesson-text').innerHTML=`
-    CONSUMER DEMAND CHANGED ${gameState.base}→${gameState.peak} BOXES<br>
-    BUT MFG ORDERS AMPLIFIED ${bullwhipFactor}X MORE<br><br>
-    WHY? EACH TIER ONLY SAW LOCAL DATA<br>
-    AND OVER-REACTED TO UNCERTAINTY<br><br>
-    FIX: SHARE POS DATA · SHORTEN<br>
-    LEAD TIME · COORDINATED FORECAST
+  // 教學文字
+  const bf=Math.max(...(res.manufacturer.history.map(w=>w.order)||[1]))
+  const cd=Math.max(...(gameState.curve||[1]))
+  const amp=(bf/cd).toFixed(1)
+  document.getElementById('db-lesson').innerHTML=`
+    消費者需求只從 ${gameState.base} 箱跳到 ${gameState.peak} 箱（+${gameState.peak-gameState.base}箱）<br>
+    但製造商的訂單峰值卻高達 ${bf} 箱（放大了 ${amp} 倍！）<br><br>
+    原因：每個角色只看到局部資訊，在不確定中過度下單<br>
+    解法：共享 POS 數據・縮短前置時間・協同預測
   `
 
-  // Save hi score
-  const myCost=res[activeRole].cost
-  hiScores.push({role:activeRole,cost:myCost,date:new Date().toLocaleDateString()})
+  // 儲存紀錄
+  hiScores.push({role:activeRole,cost:myCost})
   hiScores.sort((a,b)=>a.cost-b.cost)
   hiScores=hiScores.slice(0,10)
-  localStorage.setItem('beerHiScores',JSON.stringify(hiScores))
+  localStorage.setItem('beerHi2',JSON.stringify(hiScores))
 }
 
 function restartGame(){
-  gameState=null; activeRole=null; lastSnap=null
+  clearInterval(timerInt)
+  gameState=null;activeRole=null;lastSnap=null
   histInv=[];histOrd=[];histCost=[]
-  clearInterval(timerInterval)
-  initHome()
-  showScreen('home')
+  initHome();showScreen('home')
 }
 
-// ── INIT ─────────────────────────────────────────────────────────
+// ── 啟動 ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
   initHome()
-  // Enter key for order input
   document.getElementById('order-input').addEventListener('keydown',e=>{
-    if(e.key==='Enter') submitOrder()
+    if(e.key==='Enter')submitOrder()
   })
 })
 </script>
