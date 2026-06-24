@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>🍺 Beer Distribution Game</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+:root {
+  --bg:       #0d0d1a;
+  --bg2:      #1a1a2e;
+  --bg3:      #16213e;
+  --panel:    #0f3460;
+  --border:   #533483;
+  --text:     #e0e0ff;
+  --dim:      #7070a0;
+  --retailer: #4fc3f7;
+  --wholesale:#69f0ae;
+  --dist:     #ffd740;
+  --mfg:      #ff6e6e;
+  --accent:   #bb86fc;
+  --gold:     #ffd700;
+  --red:      #ff4444;
+  --green:    #44ff88;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; image-rendering: pixelated; }
+
+body {
+  background: var(--bg);
+  font-family: 'Press Start 2P', monospace;
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── SCANLINE EFFECT ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── PIXEL BORDER ── */
+.px-box {
+  border: 3px solid var(--border);
+  box-shadow: 3px 3px 0 #000, inset 0 0 0 1px rgba(255,255,255,0.05);
+  background: var(--bg2);
+}
+.px-box-accent {
+  border: 3px solid var(--accent);
+  box-shadow: 3px 3px 0 #000, 0 0 12px rgba(187,134,252,0.3);
+  background: var(--bg2);
+}
+
+/* ── PIXEL BUTTON ── */
+.px-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.5rem;
+  padding: 8px 14px;
+  border: 3px solid;
+  cursor: pointer;
+  background: var(--bg3);
+  color: var(--text);
+  transition: transform 0.05s;
+  letter-spacing: 0.05em;
+}
+.px-btn:active { transform: translate(2px,2px); box-shadow: none !important; }
+.px-btn-blue  { border-color: var(--retailer); color: var(--retailer); box-shadow: 3px 3px 0 #000; }
+.px-btn-green { border-color: var(--wholesale); color: var(--wholesale); box-shadow: 3px 3px 0 #000; }
+.px-btn-gold  { border-color: var(--gold); color: var(--gold); box-shadow: 3px 3px 0 #000; }
+.px-btn:hover { filter: brightness(1.2); }
+
+/* ── PIXEL INPUT ── */
+.px-input {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.7rem;
+  background: #000;
+  color: var(--green);
+  border: 3px solid var(--wholesale);
+  padding: 8px 12px;
+  width: 100%;
+  outline: none;
+  box-shadow: inset 2px 2px 0 #003300;
+  caret-color: var(--green);
+}
+.px-input:focus { border-color: var(--accent); box-shadow: 0 0 8px rgba(187,134,252,0.5); }
+
+/* ── BLINK ── */
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+@keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes walk  {
+  0%  { transform: translateX(0) scaleX(1); }
+  48% { transform: translateX(8px) scaleX(1); }
+  50% { transform: translateX(8px) scaleX(-1); }
+  98% { transform: translateX(0) scaleX(-1); }
+  100%{ transform: translateX(0) scaleX(1); }
+}
+@keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-2px)} 75%{transform:translateX(2px)} }
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.7;transform:scale(0.97)} }
+@keyframes scanline { 0%{top:-100%} 100%{top:100%} }
+@keyframes glow { 0%,100%{text-shadow:0 0 4px currentColor} 50%{text-shadow:0 0 14px currentColor,0 0 28px currentColor} }
+
+.blink  { animation: blink 1s step-end infinite; }
+.float  { animation: float 2s ease-in-out infinite; }
+.glow   { animation: glow 2s ease-in-out infinite; }
+
+/* ── PIXEL CHART ── */
+.chart-container {
+  position: relative;
+  background: #000;
+  border: 3px solid var(--border);
+  padding: 8px;
+}
+.chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 64px;
+}
+.chart-bar {
+  flex: 1;
+  min-width: 4px;
+  transition: height 0.3s steps(4);
+  image-rendering: pixelated;
+}
+
+/* ── STAR RATING ── */
+.stars { color: var(--gold); letter-spacing: 2px; font-size: 0.5rem; }
+
+/* ── PROGRESS BAR ── */
+.px-progress {
+  height: 12px;
+  background: #000;
+  border: 2px solid var(--border);
+  position: relative;
+  overflow: hidden;
+}
+.px-progress-fill {
+  height: 100%;
+  transition: width 0.3s steps(8);
+  background: repeating-linear-gradient(90deg, var(--accent) 0px, var(--accent) 4px, transparent 4px, transparent 8px);
+}
+
+/* ── LAYOUT ── */
+.screen { display: none; min-height: 100vh; }
+.screen.active { display: block; }
+
+/* ── PIXEL SPRITE via CSS (16×16 grid → 6px each = 96px) ── */
+.sprite { display: grid; gap: 0; }
+.sprite .px { display: block; }
+
+/* ── NOTIFICATION ── */
+.notif {
+  position: fixed;
+  top: 16px; right: 16px;
+  font-size: 0.45rem;
+  padding: 8px 12px;
+  z-index: 1000;
+  animation: float 0.3s ease-out;
+}
+
+/* ── TICKER ── */
+.ticker {
+  font-size: 0.4rem;
+  color: var(--wholesale);
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  border-top: 2px solid var(--border);
+  border-bottom: 2px solid var(--border);
+  padding: 4px 0;
+  background: #000;
+}
+.ticker-inner {
+  display: inline-block;
+  animation: ticker-scroll 20s linear infinite;
+}
+@keyframes ticker-scroll { 0%{transform:translateX(100vw)} 100%{transform:translateX(-100%)} }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 0: HOME
+══════════════════════════════════════════════ -->
+<div id="screen-home" class="screen active">
+  <div style="max-width:480px;margin:0 auto;padding:1.5rem 1rem">
+
+    <!-- Title -->
+    <div style="text-align:center;margin-bottom:1.5rem">
+      <div style="font-size:0.45rem;color:var(--dim);letter-spacing:0.2em;margin-bottom:8px">SUPPLY CHAIN SIM</div>
+      <div style="font-size:0.85rem;color:var(--gold);line-height:1.6" class="glow">BEER<br>GAME</div>
+      <div style="font-size:0.35rem;color:var(--dim);margin-top:8px;letter-spacing:0.1em">VER 2.0 · MIT SLOAN</div>
+    </div>
+
+    <!-- Four pixel characters preview -->
+    <div style="display:flex;justify-content:center;gap:16px;margin-bottom:1.5rem;padding:16px;background:#000;border:3px solid var(--border)">
+      <!-- Retailer sprite (blue apron clerk) -->
+      <div style="text-align:center">
+        <div class="float" style="animation-delay:0s">
+          <canvas id="spr-retailer-home" width="48" height="64" style="width:48px;height:64px"></canvas>
+        </div>
+        <div style="font-size:0.3rem;color:var(--retailer);margin-top:4px">零售</div>
+      </div>
+      <!-- Wholesaler sprite (green hardhat) -->
+      <div style="text-align:center">
+        <div class="float" style="animation-delay:0.4s">
+          <canvas id="spr-wholesaler-home" width="48" height="64" style="width:48px;height:64px"></canvas>
+        </div>
+        <div style="font-size:0.3rem;color:var(--wholesale);margin-top:4px">批发</div>
+      </div>
+      <!-- Distributor sprite (yellow jacket) -->
+      <div style="text-align:center">
+        <div class="float" style="animation-delay:0.8s">
+          <canvas id="spr-distributor-home" width="48" height="64" style="width:48px;height:64px"></canvas>
+        </div>
+        <div style="font-size:0.3rem;color:var(--dist);margin-top:4px">分销</div>
+      </div>
+      <!-- Manufacturer sprite (red engineer) -->
+      <div style="text-align:center">
+        <div class="float" style="animation-delay:1.2s">
+          <canvas id="spr-manufacturer-home" width="48" height="64" style="width:48px;height:64px"></canvas>
+        </div>
+        <div style="font-size:0.3rem;color:var(--mfg);margin-top:4px">制造</div>
+      </div>
+    </div>
+
+    <!-- Role select -->
+    <div style="font-size:0.4rem;color:var(--dim);margin-bottom:10px;letter-spacing:0.1em">▶ SELECT YOUR ROLE</div>
+    <div id="role-buttons" style="display:flex;flex-direction:column;gap:8px;margin-bottom:1.25rem">
+      <!-- injected by JS -->
+    </div>
+
+    <!-- High scores -->
+    <div class="px-box" style="padding:10px;margin-bottom:1rem">
+      <div style="font-size:0.35rem;color:var(--gold);margin-bottom:8px;letter-spacing:0.1em">── HI-SCORE ──</div>
+      <div id="hiscore-list" style="font-size:0.32rem;color:var(--dim);line-height:2">NO RECORDS YET</div>
+    </div>
+
+    <!-- Rules quick ref -->
+    <div class="px-box" style="padding:10px;font-size:0.3rem;color:var(--dim);line-height:2.2">
+      <div style="color:var(--text);margin-bottom:4px">▶ RULES</div>
+      <div>⏱ 20 WEEKS · 60 SEC/WEEK</div>
+      <div>📦 LEAD TIME: 2 WEEKS</div>
+      <div>💰 HOLD: $0.50 · SHORT: $1.00</div>
+      <div>🎲 DEMAND: SEASONAL RANDOM</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 1: GAME
+══════════════════════════════════════════════ -->
+<div id="screen-game" class="screen">
+
+  <!-- Top HUD -->
+  <div style="background:#000;border-bottom:3px solid var(--border);padding:6px 10px;display:flex;justify-content:space-between;align-items:center">
+    <div id="hud-role" style="font-size:0.4rem;color:var(--accent)">RETAILER</div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <div style="font-size:0.35rem;color:var(--dim)">WK<span id="hud-week" style="color:var(--text)">01</span>/20</div>
+      <div id="hud-timer" style="font-size:0.6rem;color:var(--gold)" class="blink">60</div>
+      <div style="font-size:0.35rem;color:var(--dim)">$<span id="hud-cost" style="color:var(--red)">0</span></div>
+    </div>
+  </div>
+
+  <div style="max-width:480px;margin:0 auto;padding:8px">
+
+    <!-- Character + Status -->
+    <div style="display:flex;gap:10px;margin-bottom:8px">
+      <!-- Sprite panel -->
+      <div class="px-box" style="padding:10px;display:flex;flex-direction:column;align-items:center;min-width:80px">
+        <canvas id="game-sprite" width="48" height="64" style="width:48px;height:64px" class="float"></canvas>
+        <div id="game-role-name" style="font-size:0.28rem;color:var(--accent);margin-top:6px;text-align:center">RETAILER</div>
+        <div id="game-stars" class="stars" style="margin-top:4px">★★★</div>
+      </div>
+      <!-- Stats -->
+      <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="px-box" style="padding:6px;text-align:center">
+            <div style="font-size:0.28rem;color:var(--dim)">STOCK</div>
+            <div id="stat-inv" style="font-size:0.9rem;color:var(--green);margin-top:2px">12</div>
+          </div>
+          <div class="px-box" style="padding:6px;text-align:center">
+            <div style="font-size:0.28rem;color:var(--dim)">BACK</div>
+            <div id="stat-back" style="font-size:0.9rem;color:var(--red);margin-top:2px">0</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+          <div class="px-box" style="padding:6px;text-align:center">
+            <div style="font-size:0.28rem;color:var(--dim)">PIPE</div>
+            <div id="stat-pipe" style="font-size:0.9rem;color:var(--dist);margin-top:2px">8</div>
+          </div>
+          <div class="px-box" style="padding:6px;text-align:center">
+            <div style="font-size:0.28rem;color:var(--dim)">ORDER</div>
+            <div id="stat-order" style="font-size:0.9rem;color:var(--retailer);margin-top:2px">—</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- This week info -->
+    <div class="px-box" style="padding:8px;margin-bottom:8px;font-size:0.32rem">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="color:var(--dim)">▸ ARRIVED</span>
+        <span id="info-recv" style="color:var(--green)">+0 BOX</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="color:var(--dim)">▸ DEMAND</span>
+        <span id="info-demand" style="color:var(--text)">— BOX</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span style="color:var(--dim)">▸ WK COST</span>
+        <span id="info-wkcost" style="color:var(--red)">$—</span>
+      </div>
+    </div>
+
+    <!-- Order input -->
+    <div id="order-panel" class="px-box-accent" style="padding:10px;margin-bottom:8px">
+      <div style="font-size:0.32rem;color:var(--accent);margin-bottom:8px" id="order-label">▶ PLACE ORDER TO WHOLESALER</div>
+      <div style="display:flex;gap:8px">
+        <input type="number" min="0" id="order-input" class="px-input" placeholder="0" style="flex:1"/>
+        <button class="px-btn px-btn-green" onclick="submitOrder()" style="white-space:nowrap">OK ▶</button>
+      </div>
+      <!-- Timer bar -->
+      <div class="px-progress" style="margin-top:8px">
+        <div id="timer-bar" class="px-progress-fill" style="width:100%"></div>
+      </div>
+    </div>
+
+    <!-- Submitted state -->
+    <div id="submitted-panel" style="display:none" class="px-box" style="padding:10px;margin-bottom:8px;text-align:center">
+      <div style="font-size:0.4rem;color:var(--green)">✓ SUBMITTED</div>
+      <div id="submit-progress" style="font-size:0.3rem;color:var(--dim);margin-top:6px">WAITING 1/4...</div>
+    </div>
+
+    <!-- Hint -->
+    <div id="hint-box" style="display:none" class="px-box" style="padding:8px;margin-bottom:8px;border-color:var(--dist)">
+      <div style="font-size:0.28rem;color:var(--dist);line-height:1.8" id="hint-text"></div>
+    </div>
+
+    <!-- Charts -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <!-- Inventory chart -->
+      <div>
+        <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">INVENTORY</div>
+        <div class="chart-container">
+          <div id="chart-inv" class="chart-bars"></div>
+        </div>
+      </div>
+      <!-- Order chart -->
+      <div>
+        <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">ORDERS</div>
+        <div class="chart-container">
+          <div id="chart-ord" class="chart-bars"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cost chart (full width) -->
+    <div>
+      <div style="font-size:0.28rem;color:var(--dim);margin-bottom:4px">CUMULATIVE COST</div>
+      <div class="chart-container" style="height:48px">
+        <div id="chart-cost" class="chart-bars" style="height:40px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Ticker -->
+  <div class="ticker" style="margin-top:8px">
+    <span class="ticker-inner" id="ticker-text">
+      ▸ BEER DISTRIBUTION GAME ▸ SUPPLY CHAIN SIM ▸ WATCH OUT FOR BULLWHIP EFFECT ▸ LEAD TIME: 2 WEEKS ▸
+    </span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCREEN 2: DEBRIEF
+══════════════════════════════════════════════ -->
+<div id="screen-debrief" class="screen">
+  <div style="max-width:480px;margin:0 auto;padding:1rem">
+
+    <div style="text-align:center;margin-bottom:1rem">
+      <div style="font-size:0.6rem;color:var(--gold)" class="glow">GAME OVER</div>
+      <div style="font-size:0.32rem;color:var(--dim);margin-top:6px">SUPPLY CHAIN DEBRIEF</div>
+    </div>
+
+    <!-- Demand reveal -->
+    <div class="px-box-accent" style="padding:10px;margin-bottom:10px;text-align:center">
+      <div style="font-size:0.3rem;color:var(--dim);margin-bottom:4px">▶ DEMAND PATTERN REVEALED</div>
+      <div id="demand-mode-label" style="font-size:0.45rem;color:var(--accent)">SUMMER PEAK</div>
+      <div id="demand-mode-desc" style="font-size:0.28rem;color:var(--dim);margin-top:4px;line-height:1.8"></div>
+    </div>
+
+    <!-- Rankings -->
+    <div id="rankings" style="margin-bottom:10px"></div>
+
+    <!-- Bullwhip chart -->
+    <div class="px-box" style="padding:10px;margin-bottom:10px">
+      <div style="font-size:0.32rem;color:var(--gold);margin-bottom:8px">▶ BULLWHIP EFFECT</div>
+      <div style="font-size:0.25rem;color:var(--dim);margin-bottom:8px;line-height:1.8">
+        CONSUMER DEMAND VS UPSTREAM ORDERS
+      </div>
+
+      <!-- Legend -->
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="font-size:0.25rem;color:var(--dim)">■ <span style="color:#888">CONSUMER</span></span>
+        <span style="font-size:0.25rem;color:var(--retailer)">■ RETAIL</span>
+        <span style="font-size:0.25rem;color:var(--wholesale)">■ WHOLE</span>
+        <span style="font-size:0.25rem;color:var(--dist)">■ DIST</span>
+        <span style="font-size:0.25rem;color:var(--mfg)">■ MFG</span>
+      </div>
+
+      <!-- Multi-line pixel chart -->
+      <div style="background:#000;padding:6px;border:2px solid var(--border);position:relative">
+        <canvas id="bullwhip-canvas" width="400" height="120" style="width:100%;height:120px"></canvas>
+      </div>
+    </div>
+
+    <!-- Score cards -->
+    <div id="score-cards" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px"></div>
+
+    <!-- Supply chain lesson -->
+    <div class="px-box" style="padding:10px;margin-bottom:10px;font-size:0.28rem;color:var(--dim);line-height:2">
+      <div style="color:var(--accent);margin-bottom:6px">▶ BULLWHIP EFFECT 101</div>
+      <div id="lesson-text" style="line-height:2"></div>
+    </div>
+
+    <button class="px-btn px-btn-gold" onclick="restartGame()" style="width:100%;padding:12px;font-size:0.45rem">
+      ▶ PLAY AGAIN
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT ENGINE
+══════════════════════════════════════════════ -->
+<script>
+// ── PIXEL ART SPRITES (16×16, drawn on canvas) ──────────────────
+// Color palettes
+const PAL = {
+  skin:    '#fbbf24', skin2:   '#d97706',
+  blue:    '#4fc3f7', blue2:   '#0288d1', blue3:  '#01579b',
+  green:   '#69f0ae', green2:  '#00c853', green3: '#1b5e20',
+  yellow:  '#ffd740', yellow2: '#f9a825', yellow3:'#ff6f00',
+  red:     '#ff6e6e', red2:    '#e53935', red3:   '#b71c1c',
+  white:   '#e0e0ff', gray:    '#607080', dark:   '#0d0d1a',
+  black:   '#000000', gold:    '#ffd700',
+  brown:   '#795548', brown2:  '#4e342e',
+  helmet_r:'#ff1744', helmet_g:'#00e676',
+}
+const _='';
+
+// Each sprite: 16×16 array of color values
+const SPRITES = {
+  retailer: [
+  // row 0-2: blue cap
+  [_,_,_,_,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,PAL.blue3,_,_,_,_,_],
+  [_,_,_,PAL.blue2,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue2,_,_,_,_,_],
+  [_,_,PAL.blue2,PAL.blue,PAL.blue,PAL.blue,PAL.white,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue2,_,_,_,_],
+  // row 3-5: face
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin2,PAL.skin2,PAL.skin2,PAL.skin2,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  // row 6: neck
+  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
+  // row 7-10: blue apron body
+  [_,PAL.skin,PAL.skin,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.skin,PAL.skin,_,_,_,_,_],
+  [PAL.white,PAL.white,PAL.blue,PAL.blue,PAL.blue2,PAL.blue,PAL.blue,PAL.blue2,PAL.blue,PAL.white,PAL.white,PAL.skin,_,_,_,_],
+  [_,PAL.skin,PAL.blue,PAL.blue,PAL.blue,PAL.white,PAL.white,PAL.blue,PAL.blue,PAL.skin,PAL.gray,_,_,_,_,_],
+  [_,_,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,PAL.blue,_,_,_,_,_,_,_],
+  // row 11-13: legs
+  [_,_,PAL.blue3,PAL.blue3,PAL.blue3,_,_,PAL.blue3,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
+  [_,_,PAL.blue3,PAL.blue3,_,_,_,_,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
+  // row 14-15: shoes
+  [_,_,PAL.blue3,PAL.gray,PAL.gray,_,_,PAL.blue3,PAL.gray,PAL.gray,_,_,_,_,_,_],
+  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ],
+
+  wholesaler: [
+  [_,_,_,_,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,PAL.green3,_,_,_,_,_],
+  [_,_,_,PAL.green2,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green2,_,_,_,_,_],
+  [_,_,PAL.green2,PAL.green,PAL.green,PAL.green,PAL.white,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green2,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,PAL.skin,PAL.black,PAL.black,PAL.skin,PAL.skin,PAL.black,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
+  // vest + clipboard
+  [_,PAL.skin,PAL.skin,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.green,PAL.skin,PAL.skin,_,_,_,_,_],
+  [PAL.white,PAL.white,PAL.green,PAL.green,PAL.green2,PAL.green,PAL.green,PAL.green2,PAL.green,PAL.white,PAL.white,_,_,PAL.white,PAL.white,_],
+  [_,PAL.skin,PAL.green,PAL.green,PAL.green,PAL.white,PAL.white,PAL.green,PAL.green,PAL.skin,_,_,_,PAL.white,PAL.white,_],
+  [_,_,PAL.dark,PAL.dark,PAL.green,PAL.yellow,PAL.green,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.dark,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.gray,_,_,_,_,PAL.gray,PAL.dark,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.yellow,PAL.yellow,_,_,PAL.dark,PAL.yellow,PAL.yellow,_,_,_,_,_,_],
+  [_,_,PAL.gray,PAL.yellow,PAL.yellow,_,_,PAL.gray,PAL.yellow,PAL.yellow,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ],
+
+  distributor: [
+  [_,_,_,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,PAL.brown,_,_,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_],
+  // sunglasses
+  [_,_,PAL.skin,PAL.dark,PAL.dark,PAL.dark,PAL.gray,PAL.gray,PAL.dark,PAL.dark,PAL.skin,_,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,PAL.skin2,PAL.skin,PAL.skin,_,_,_,_,_,_],
+  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
+  // yellow jacket
+  [_,PAL.skin,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,PAL.skin,_,_,_,_,_],
+  [PAL.white,PAL.white,PAL.yellow,PAL.yellow,PAL.yellow2,PAL.yellow,PAL.yellow,PAL.yellow2,PAL.yellow,PAL.white,PAL.white,_,_,_,_,_],
+  [_,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,_,_,_,_,_,_],
+  [_,PAL.skin,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.yellow,PAL.skin,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.dark,PAL.yellow,PAL.gold,PAL.yellow,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
+  [_,_,PAL.blue3,PAL.blue3,PAL.gray,_,_,PAL.gray,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
+  [_,_,PAL.blue3,PAL.blue3,_,_,_,_,PAL.blue3,PAL.blue3,_,_,_,_,_,_],
+  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
+  [_,_,PAL.gray,PAL.gray,PAL.gray,_,_,PAL.gray,PAL.gray,PAL.gray,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ],
+
+  manufacturer: [
+  // red hardhat
+  [_,_,_,_,PAL.red3,PAL.red3,PAL.red3,PAL.red3,PAL.red3,PAL.red3,_,_,_,_,_,_],
+  [_,_,_,PAL.red2,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red2,_,_,_,_,_],
+  [_,_,PAL.red2,PAL.red,PAL.red,PAL.red,PAL.white,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red2,_,_,_,_],
+  [_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  [_,_,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.black,PAL.skin,PAL.skin,PAL.skin,_,_,_,_],
+  // beard
+  [_,_,PAL.skin,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.brown2,PAL.skin,_,_,_,_,_,_],
+  [_,_,_,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,PAL.skin,_,_,_,_,_,_,_],
+  // red overalls
+  [_,PAL.skin,PAL.skin,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.red,PAL.skin,PAL.skin,_,_,_,_,_],
+  [PAL.gray,PAL.skin,PAL.red,PAL.red,PAL.red2,PAL.red,PAL.red,PAL.red2,PAL.red,PAL.skin,PAL.gray,_,_,_,_,_],
+  [_,PAL.skin,PAL.red,PAL.red,PAL.red,PAL.white,PAL.white,PAL.red,PAL.red,PAL.skin,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.dark,PAL.red,PAL.yellow,PAL.red,PAL.dark,PAL.dark,_,_,_,_,_,_,_],
+  [_,_,PAL.red3,PAL.red3,PAL.red3,_,_,PAL.red3,PAL.red3,PAL.red3,_,_,_,_,_,_],
+  [_,_,PAL.red3,PAL.red3,_,_,_,_,PAL.red3,PAL.red3,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.dark,PAL.gray,_,_,PAL.dark,PAL.dark,PAL.gray,_,_,_,_,_,_],
+  [_,_,PAL.dark,PAL.gray,PAL.gray,_,_,PAL.dark,PAL.gray,PAL.gray,_,_,_,_,_,_],
+  [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
+  ],
+}
+
+function drawSprite(canvasId, roleName) {
+  const canvas = document.getElementById(canvasId)
+  if (!canvas) return
+  const ctx = canvas.getContext('2d')
+  ctx.clearRect(0,0,canvas.width,canvas.height)
+  const data = SPRITES[roleName]
+  if (!data) return
+  const pw = canvas.width / 16
+  const ph = canvas.height / 16
+  for (let r=0; r<16; r++) {
+    for (let c=0; c<16; c++) {
+      const col = data[r]?.[c]
+      if (col && col !== '') {
+        ctx.fillStyle = col
+        ctx.fillRect(c*pw, r*ph, pw, ph)
+      }
+    }
+  }
+}
+
+// ── GAME CONFIG ──────────────────────────────────────────────────
+const ROLES = ['retailer','wholesaler','distributor','manufacturer']
+const ROLE_CFG = {
+  retailer:    { name:'RETAILER',    zh:'零售商', color:'#4fc3f7', threshold:150, order:'ORDER TO WHOLESALER', hints:{5:'DEMAND SPIKED! ADJUST SAFETY STOCK',10:'ARE YOU OVER-ORDERING?',16:'GAME ENDING SOON'} },
+  wholesaler:  { name:'WHOLESALER',  zh:'批发商', color:'#69f0ae', threshold:200, order:'ORDER TO DISTRIBUTOR', hints:{5:'RETAILERS PANICKING? STAY CALM',8:'BULLWHIP IN ACTION!',15:'PIPELINE FULL? REDUCE ORDERS'} },
+  distributor: { name:'DISTRIBUTOR', zh:'分销商', color:'#ffd740', threshold:250, order:'ORDER TO MANUFACTURER', hints:{5:'SMOOTH YOUR ORDERS — BE THE BUFFER',10:'LESS VOLATILE THAN WHOLESALER?',15:'HOLD STEADY LAST 5 WEEKS'} },
+  manufacturer:{ name:'MANUFACTURER',zh:'制造商', color:'#ff6e6e', threshold:300, order:'SET PRODUCTION QTY', hints:{5:'DEMAND SIGNAL DISTORTED — STAY STABLE',10:'STEADY PRODUCTION = LOWER COST',15:'DONT OVERPRODUCE NOW'} },
+}
+
+const MODE_LABELS = {
+  summer:'☀ SUMMER PEAK',winter:'❄ WINTER SURGE',bimodal:'◆ DOUBLE PEAK',shock:'⚡ DEMAND SHOCK'
+}
+const MODE_DESCS = {
+  summer:'HIGH DEMAND WKS 6-14 THEN DROPS',
+  winter:'DEMAND RISES FROM WK 12 ONWARD',
+  bimodal:'TWO PEAKS: WK4-7 AND WK14-17',
+  shock:'ONE BIG SPIKE THEN FALLS FAST'
+}
+
+function genDemand() {
+  let s = Math.floor(Math.random()*99999)
+  const rand=()=>{s=(s*1664525+1013904223)&0xffffffff;return(s>>>0)/0xffffffff}
+  const ri=(a,b)=>Math.floor(rand()*(b-a+1))+a
+  const modes=['summer','winter','bimodal','shock']
+  const mode=modes[Math.floor(rand()*modes.length)]
+  const base=ri(3,5), peak=ri(8,14)
+  const curve=[]
+  for(let w=1;w<=20;w++){
+    let d=base
+    if(mode==='summer'){if(w>=6&&w<=14)d=peak}
+    else if(mode==='winter'){if(w>=12)d=peak}
+    else if(mode==='bimodal'){if((w>=4&&w<=7)||(w>=14&&w<=17))d=peak}
+    else if(mode==='shock'){const sw=ri(5,12);if(w===sw)d=peak+ri(4,8);else if(w===sw+1)d=Math.floor(peak*0.6)}
+    curve.push(Math.max(1,d+ri(-1,1)))
+  }
+  return{curve,mode,base,peak}
+}
+
+function initState(demandData){
+  const roles={}
+  for(const r of ROLES) roles[r]={inventory:12,backlog:0,pipeline:[4,4],cost:0,history:[]}
+  return{week:1,roles,status:'active',...demandData}
+}
+
+function processWeek(state,orders){
+  const week=state.week, cd=state.curve[week-1], newRoles={}, snap={}
+  const recv={};for(const r of ROLES)recv[r]=state.roles[r].pipeline[0]
+  const inv={};for(const r of ROLES)inv[r]=state.roles[r].inventory+recv[r]
+  const inc={retailer:cd,wholesaler:orders.retailer,distributor:orders.wholesaler,manufacturer:orders.distributor}
+  const td={};for(const r of ROLES)td[r]=inc[r]+state.roles[r].backlog
+  const sh={},bl={},ia={}
+  for(const r of ROLES){sh[r]=Math.min(inv[r],td[r]);ia[r]=inv[r]-sh[r];bl[r]=td[r]-sh[r]}
+  for(const r of ROLES){
+    const hc=ia[r]*0.5,sc=bl[r]*1.0,wc=hc+sc,nc=state.roles[r].cost+wc
+    snap[r]={week,received:recv[r],demand:inc[r],inventory:ia[r],backlog:bl[r],order:orders[r],hc,sc,wc,cost:nc}
+    newRoles[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],cost:nc,history:[...state.roles[r].history,snap[r]]}
+  }
+  return{newState:{...state,week:week+1,roles:newRoles,status:week>=20?'finished':'active'},snap,cd}
+}
+
+function autoOrder(role,state){
+  const rs=state.roles[role],it=rs.pipeline[0]+rs.pipeline[1]
+  return Math.max(0,Math.round(16-rs.inventory-it+rs.backlog))
+}
+
+// ── STATE ────────────────────────────────────────────────────────
+let gameState=null, activeRole=null, lastSnap=null
+let timerInterval=null, timeLeft=60
+let histInv=[], histOrd=[], histCost=[]
+let hiScores = JSON.parse(localStorage.getItem('beerHiScores')||'[]')
+
+// ── SCREENS ──────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'))
+  document.getElementById('screen-'+id).classList.add('active')
+}
+
+// ── HOME SCREEN ──────────────────────────────────────────────────
+function initHome(){
+  // Draw all sprites
+  const roles=['retailer','wholesaler','distributor','manufacturer']
+  roles.forEach(r=>drawSprite('spr-'+r+'-home',r))
+
+  // Role buttons
+  const container=document.getElementById('role-buttons')
+  container.innerHTML=''
+  const roleData=[
+    {r:'retailer',    c:'var(--retailer)', label:'🏪 RETAILER    [STORE CLERK]',    th:150},
+    {r:'wholesaler',  c:'var(--wholesale)',label:'📦 WHOLESALER  [WAREHOUSE MGR]',   th:200},
+    {r:'distributor', c:'var(--dist)',     label:'🚛 DISTRIBUTOR [TRUCK DRIVER]',    th:250},
+    {r:'manufacturer',c:'var(--mfg)',      label:'🏭 MANUFACTURER[PLANT ENGINEER]',  th:300},
+  ]
+  roleData.forEach(({r,c,label,th})=>{
+    const btn=document.createElement('button')
+    btn.className='px-btn'
+    btn.style.cssText=`border-color:${c};color:${c};font-size:0.35rem;padding:10px 12px;text-align:left;box-shadow:3px 3px 0 #000`
+    btn.innerHTML=`${label}<span style="float:right;color:var(--dim)">TARGET&lt;$${th}</span>`
+    btn.onclick=()=>startGame(r)
+    container.appendChild(btn)
+  })
+
+  // Hi scores
+  const el=document.getElementById('hiscore-list')
+  if(hiScores.length===0){el.textContent='NO RECORDS YET';return}
+  el.innerHTML=hiScores.slice(0,5).map((s,i)=>
+    `<div>${String(i+1).padStart(2,'0')} ${s.role.toUpperCase().padEnd(12)} $${s.cost.toFixed(1).padStart(6)}</div>`
+  ).join('')
+}
+
+// ── START GAME ───────────────────────────────────────────────────
+function startGame(role){
+  activeRole=role
+  const demand=genDemand()
+  gameState=initState(demand)
+  lastSnap=null
+  histInv=[];histOrd=[];histCost=[]
+
+  // Setup game screen
+  const cfg=ROLE_CFG[role]
+  document.getElementById('hud-role').textContent=cfg.name
+  document.getElementById('hud-role').style.color=cfg.color
+  document.getElementById('game-role-name').textContent=cfg.name
+  document.getElementById('game-role-name').style.color=cfg.color
+  document.getElementById('order-label').textContent='▶ '+cfg.order
+  document.getElementById('order-label').style.color=cfg.color
+  drawSprite('game-sprite',role)
+
+  updateGameUI()
+  showScreen('game')
+  startTimer()
+
+  // Update ticker
+  document.getElementById('ticker-text').textContent=
+    `▸ PLAYING AS ${cfg.name} ▸ LEAD TIME: 2 WKS ▸ TARGET: <$${cfg.threshold} ▸ WEEK 1/20 ▸ GOOD LUCK! ▸`
+}
+
+// ── TIMER ────────────────────────────────────────────────────────
+function startTimer(){
+  clearInterval(timerInterval)
+  timeLeft=60
+  updateTimerUI()
+  timerInterval=setInterval(()=>{
+    timeLeft--
+    updateTimerUI()
+    if(timeLeft<=0){
+      clearInterval(timerInterval)
+      // auto submit last order
+      const h=gameState.roles[activeRole].history
+      const lastOrd=h.length>0?h[h.length-1].order:4
+      doSubmit(lastOrd)
+    }
+  },1000)
+}
+
+function updateTimerUI(){
+  const el=document.getElementById('hud-timer')
+  el.textContent=String(timeLeft).padStart(2,'0')
+  el.style.color=timeLeft<=10?'var(--red)':timeLeft<=20?'var(--dist)':'var(--gold)'
+  const bar=document.getElementById('timer-bar')
+  bar.style.width=(timeLeft/60*100)+'%'
+  if(timeLeft<=10) bar.style.background='repeating-linear-gradient(90deg,var(--red) 0px,var(--red) 4px,transparent 4px,transparent 8px)'
+}
+
+// ── SUBMIT ───────────────────────────────────────────────────────
+function submitOrder(){
+  const val=parseInt(document.getElementById('order-input').value)
+  if(isNaN(val)||val<0)return
+  clearInterval(timerInterval)
+  doSubmit(val)
+}
+
+function doSubmit(qty){
+  // Show submitted state
+  document.getElementById('order-panel').style.display='none'
+  document.getElementById('submitted-panel').style.display='block'
+  document.getElementById('stat-order').textContent=qty
+  document.getElementById('submit-progress').textContent='PROCESSING...'
+
+  // AI fills other roles
+  const ao={}
+  for(const r of ROLES) if(r!==activeRole) ao[r]=autoOrder(r,gameState)
+  const allOrders={...ao,[activeRole]:qty}
+
+  setTimeout(()=>{
+    const{newState,snap,cd}=processWeek(gameState,allOrders)
+    gameState=newState
+    lastSnap=snap
+
+    // Update history
+    const mySnap=snap[activeRole]
+    histInv.push(mySnap.inventory)
+    histOrd.push(mySnap.order)
+    histCost.push(mySnap.cost)
+
+    // Check finished
+    if(newState.status==='finished'){
+      clearInterval(timerInterval)
+      showDebrief()
+      return
+    }
+
+    // Next week
+    document.getElementById('order-panel').style.display='block'
+    document.getElementById('submitted-panel').style.display='none'
+    document.getElementById('order-input').value=''
+    updateGameUI()
+    startTimer()
+
+    // Hint
+    const hint=ROLE_CFG[activeRole].hints[newState.week]
+    const hintBox=document.getElementById('hint-box')
+    if(hint){hintBox.style.display='block';document.getElementById('hint-text').textContent='▸ TIP: '+hint}
+    else hintBox.style.display='none'
+
+    // Ticker update
+    document.getElementById('ticker-text').textContent=
+      `▸ WEEK ${newState.week}/20 ▸ COST: $${mySnap.cost.toFixed(1)} ▸ INV: ${mySnap.inventory} ▸ ORDER: ${mySnap.order} ▸`
+  }, 600)
+}
+
+// ── UPDATE UI ────────────────────────────────────────────────────
+function updateGameUI(){
+  const rs=gameState.roles[activeRole]
+  const week=gameState.week
+  document.getElementById('hud-week').textContent=String(week).padStart(2,'0')
+  document.getElementById('hud-cost').textContent=rs.cost.toFixed(1)
+  document.getElementById('stat-inv').textContent=rs.inventory
+  document.getElementById('stat-inv').style.color=rs.inventory<4?'var(--red)':rs.inventory>20?'var(--dist)':'var(--green)'
+  document.getElementById('stat-back').textContent=rs.backlog
+  document.getElementById('stat-back').style.color=rs.backlog>0?'var(--red)':'var(--green)'
+  document.getElementById('stat-pipe').textContent=rs.pipeline[0]+rs.pipeline[1]
+  document.getElementById('stat-order').textContent='—'
+
+  // Stars
+  const pct=rs.cost/ROLE_CFG[activeRole].threshold
+  const stars=pct<0.5?'★★★':pct<0.8?'★★☆':'★☆☆'
+  document.getElementById('game-stars').textContent=stars
+
+  if(lastSnap){
+    const s=lastSnap[activeRole]
+    document.getElementById('info-recv').textContent=`+${s.received} BOX`
+    document.getElementById('info-demand').textContent=`${s.demand} BOX`
+    document.getElementById('info-wkcost').textContent=`$${s.wc.toFixed(2)}`
+  }
+
+  // Charts
+  renderPixelChart('chart-inv', histInv, '#4fc3f7', 20)
+  renderPixelChart('chart-ord', histOrd, '#ffd740', 20)
+  renderPixelChart('chart-cost',histCost,'#ff6e6e', 300)
+}
+
+function renderPixelChart(id, data, color, maxVal){
+  const container=document.getElementById(id)
+  container.innerHTML=''
+  const max=Math.max(...data,maxVal*0.1,1)
+  data.forEach((v,i)=>{
+    const bar=document.createElement('div')
+    bar.className='chart-bar'
+    const h=Math.max(2,Math.round((v/max)*100))+'%'
+    bar.style.cssText=`height:${h};background:${color};opacity:${0.5+0.5*(v/max)};` +
+      `box-shadow:0 0 ${Math.round(v/max*6)}px ${color};` +
+      `image-rendering:pixelated`
+    // Pixel step effect
+    bar.style.clipPath='inset(0)'
+    container.appendChild(bar)
+  })
+}
+
+// ── DEBRIEF ──────────────────────────────────────────────────────
+function showDebrief(){
+  showScreen('debrief')
+
+  // Demand reveal
+  document.getElementById('demand-mode-label').textContent=MODE_LABELS[gameState.mode]||gameState.mode.toUpperCase()
+  document.getElementById('demand-mode-desc').textContent=MODE_DESCS[gameState.mode]||''
+
+  // Rankings
+  const res={}
+  for(const r of ROLES) res[r]={cost:gameState.roles[r].cost,history:gameState.roles[r].history}
+  const sorted=[...ROLES].sort((a,b)=>res[a].cost-res[b].cost)
+  const teamTotal=ROLES.reduce((s,r)=>s+res[r].cost,0)
+
+  const rankEl=document.getElementById('rankings')
+  rankEl.innerHTML=''
+  sorted.forEach((role,i)=>{
+    const cfg=ROLE_CFG[role],r=res[role]
+    const isMe=role===activeRole
+    const div=document.createElement('div')
+    div.style.cssText=`display:flex;align-items:center;gap:8px;padding:8px;margin-bottom:6px;border:${isMe?'3px':'1px'} solid ${cfg.color};background:${isMe?cfg.color+'22':'#000'}`
+    const stars=r.cost<cfg.threshold?'★★★':r.cost<cfg.threshold*1.3?'★★☆':'★☆☆'
+    div.innerHTML=`
+      <div style="font-size:0.5rem;color:var(--gold);min-width:20px">#${i+1}</div>
+      <canvas id="rank-spr-${role}" width="24" height="32" style="width:24px;height:32px;image-rendering:pixelated"></canvas>
+      <div style="flex:1">
+        <div style="font-size:0.32rem;color:${cfg.color}">${cfg.name}${isMe?' ◀YOU':''}</div>
+        <div style="font-size:0.25rem;color:var(--dim);margin-top:2px">${stars}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:0.4rem;color:${r.cost<cfg.threshold?'var(--green)':'var(--text)'}">$${r.cost.toFixed(1)}</div>
+        ${r.cost<cfg.threshold?'<div style="font-size:0.22rem;color:var(--green)">EXCELLENT!</div>':''}
+      </div>
+    `
+    rankEl.appendChild(div)
+    setTimeout(()=>drawSprite('rank-spr-'+role,role),50)
+  })
+
+  // Score cards
+  const sc=document.getElementById('score-cards')
+  sc.innerHTML=`
+    <div class="px-box" style="padding:8px;text-align:center">
+      <div style="font-size:0.28rem;color:var(--dim)">TEAM TOTAL</div>
+      <div style="font-size:0.6rem;color:${teamTotal<700?'var(--green)':'var(--red)'}">$${teamTotal.toFixed(0)}</div>
+      <div style="font-size:0.25rem;color:var(--dim)">TARGET &lt;$700</div>
+    </div>
+    <div class="px-box" style="padding:8px;text-align:center">
+      <div style="font-size:0.28rem;color:var(--dim)">YOUR COST</div>
+      <div style="font-size:0.6rem;color:${res[activeRole].cost<ROLE_CFG[activeRole].threshold?'var(--green)':'var(--dist)'}">$${res[activeRole].cost.toFixed(0)}</div>
+      <div style="font-size:0.25rem;color:var(--dim)">TARGET &lt;$${ROLE_CFG[activeRole].threshold}</div>
+    </div>
+  `
+
+  // Bullwhip canvas chart
+  const canvas=document.getElementById('bullwhip-canvas')
+  const ctx=canvas.getContext('2d')
+  ctx.clearRect(0,0,400,120)
+
+  const allData={
+    consumer: gameState.curve,
+    retailer: res.retailer.history.map(w=>w.order),
+    wholesaler: res.wholesaler.history.map(w=>w.order),
+    distributor: res.distributor.history.map(w=>w.order),
+    manufacturer: res.manufacturer.history.map(w=>w.order),
+  }
+  const colors={'consumer':'#555','retailer':'#4fc3f7','wholesaler':'#69f0ae','distributor':'#ffd740','manufacturer':'#ff6e6e'}
+  const allVals=[].concat(...Object.values(allData))
+  const maxV=Math.max(...allVals,1)
+
+  Object.entries(allData).forEach(([key,data])=>{
+    if(!data||data.length===0)return
+    ctx.strokeStyle=colors[key]
+    ctx.lineWidth=2
+    ctx.shadowColor=colors[key]
+    ctx.shadowBlur=4
+    ctx.beginPath()
+    data.forEach((v,i)=>{
+      const x=(i/(data.length-1))*396+2
+      const y=110-((v/maxV)*100)
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)
+    })
+    ctx.stroke()
+  })
+
+  // Grid lines (pixel style)
+  ctx.shadowBlur=0
+  ctx.strokeStyle='#1a1a2e'
+  ctx.lineWidth=1
+  for(let i=0;i<=4;i++){
+    ctx.beginPath()
+    ctx.moveTo(0,i*30)
+    ctx.lineTo(400,i*30)
+    ctx.stroke()
+  }
+
+  // Lesson text
+  const bullwhipFactor=(Math.max(...allData.manufacturer||[1])/Math.max(...(gameState.curve||[1]))).toFixed(1)
+  document.getElementById('lesson-text').innerHTML=`
+    CONSUMER DEMAND CHANGED ${gameState.base}→${gameState.peak} BOXES<br>
+    BUT MFG ORDERS AMPLIFIED ${bullwhipFactor}X MORE<br><br>
+    WHY? EACH TIER ONLY SAW LOCAL DATA<br>
+    AND OVER-REACTED TO UNCERTAINTY<br><br>
+    FIX: SHARE POS DATA · SHORTEN<br>
+    LEAD TIME · COORDINATED FORECAST
+  `
+
+  // Save hi score
+  const myCost=res[activeRole].cost
+  hiScores.push({role:activeRole,cost:myCost,date:new Date().toLocaleDateString()})
+  hiScores.sort((a,b)=>a.cost-b.cost)
+  hiScores=hiScores.slice(0,10)
+  localStorage.setItem('beerHiScores',JSON.stringify(hiScores))
+}
+
+function restartGame(){
+  gameState=null; activeRole=null; lastSnap=null
+  histInv=[];histOrd=[];histCost=[]
+  clearInterval(timerInterval)
+  initHome()
+  showScreen('home')
+}
+
+// ── INIT ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  initHome()
+  // Enter key for order input
+  document.getElementById('order-input').addEventListener('keydown',e=>{
+    if(e.key==='Enter') submitOrder()
+  })
+})
+</script>
+</body>
+</html>
