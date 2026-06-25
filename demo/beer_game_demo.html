@@ -1583,8 +1583,9 @@ function doSubmit(qty){
   clearInterval(timerID)
   document.getElementById('hud-timer').classList.remove('blink')
   document.getElementById('g-az').style.display='none'
-  document.getElementById('g-wait').style.display='block'
-  document.getElementById('g-sub-n').textContent=qty
+  const waitEl=document.getElementById('g-wait')
+  waitEl.innerHTML='<div class="pbox" style="padding:16px;text-align:center"><div style="font-size:15px;color:var(--grn)">✅ 已提交 <span id="g-sub-n">'+qty+'</span> 箱</div><div style="font-size:12px;color:var(--c2);margin-top:6px">計算中...</div></div>'
+  waitEl.style.display='block'
   if(multiMode){
     console.log('[DBG] emit submit_order qty=' + qty)
     socket.emit('submit_order',{quantity:qty},(res)=>{
