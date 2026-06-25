@@ -12,6 +12,7 @@ const io = new Server(server, {
 })
 
 app.use(express.json())
+app.use((req, res, next) => { res.header('Access-Control-Allow-Origin', '*'); next() })
 app.get('/health', (req, res) => res.json({ ok: true }))
 
 // Keep Render free instance alive
