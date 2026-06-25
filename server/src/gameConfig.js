@@ -33,7 +33,8 @@ function makeLCG(seed) {
  * @returns {{ curve, mode, modeDesc, base, peak }}
  */
 function generateDemandCurve(seed) {
-  const rng = makeLCG(seed || (Date.now() % 999983))
+  const actualSeed = seed || (Date.now() % 999983)
+  const rng = makeLCG(actualSeed)
 
   const base     = rng.range(4.0, 7.0)   // 基礎需求均值
   const amp1     = rng.range(3.0, 6.0)   // 主週期振幅
@@ -81,21 +82,24 @@ function generateDemandCurve(seed) {
   const maxWeek = curve.indexOf(maxVal) + 1
 
   let mode, modeDesc
-  if (shockCount >= 2) {
-    mode     = '⚡ 雙重衝擊型'
+  if (shockCount >= 3) {
+    mode     = '⚡ 三重衝擊型'
+    modeDesc = '本局出現三次突發需求衝擊，全程高度警戒。'
+  } else if (shockCount === 2) {
+    mode     = '💥 雙重衝擊型'
     modeDesc = '本局出現兩次突發需求衝擊，考驗快速應變能力。'
-  } else if (shockCount === 1) {
-    mode     = '💥 突發衝擊型'
-    modeDesc = `第 ${shocks[0].week} 週附近出現需求暴增，之後迅速回落。`
-  } else if (maxWeek >= 6 && maxWeek <= 14) {
-    mode     = '☀️ 夏季旺季型'
-    modeDesc = '中段（第6-14週）需求走高，頭尾較平穩，需提前備貨。'
-  } else if (maxWeek >= 14) {
-    mode     = '❄️ 冬季旺季型'
-    modeDesc = '後半段需求持續走高，越到後期供應壓力越大。'
   } else {
-    mode     = '📈 自然波動型'
-    modeDesc = '需求呈自然週期波動，有漲有跌，考驗預測能力。'
+    // shockCount === 1，搭配季節模式判定
+    if (maxWeek >= 6 && maxWeek <= 14) {
+      mode     = '☀️ 夏季旺季型'
+      modeDesc = `中段（第6-14週）需求走高，第 ${shocks[0].week} 週有一次衝擊，需提前備貨。`
+    } else if (maxWeek > 14) {
+      mode     = '❄️ 冬季旺季型'
+      modeDesc = `後半段需求持續走高，第 ${shocks[0].week} 週有突發衝擊，越到後期供應壓力越大。`
+    } else {
+      mode     = '💥 突發衝擊型'
+      modeDesc = `第 ${shocks[0].week} 週附近出現需求暴增，之後迅速回落。`
+    }
   }
 
   return {
@@ -104,6 +108,7 @@ function generateDemandCurve(seed) {
     modeDesc,
     base: Math.round(minVal),
     peak: Math.round(maxVal),
+    seed: actualSeed,
   }
 }
 
@@ -113,23 +118,23 @@ const GAME_CONFIG = {
   LEAD_TIME:         2,        // 前置時間（週）
   INITIAL_INVENTORY: 12,       // 期初庫存（各角色相同）
   INITIAL_PIPELINE:  [4, 4],   // 期初在途 [下週到, 後週到]
-  // 各角色不同成本結構
+  // 各角色不同成本結構（整數，/箱/週）
   ROLE_COSTS: {
-    retailer:     { holding: 0.10, shortage: 1.00 },
-    wholesaler:   { holding: 0.15, shortage: 0.70 },
-    distributor:  { holding: 0.20, shortage: 0.50 },
-    manufacturer: { holding: 0.30, shortage: 0.30 },
+    retailer:     { holding: 1, shortage: 10 },
+    wholesaler:   { holding: 2, shortage:  7 },
+    distributor:  { holding: 2, shortage:  5 },
+    manufacturer: { holding: 3, shortage:  3 },
   },
   ROUND_TIME_SECONDS:60,       // 每週決策時限
 
   ROLES: ['retailer', 'wholesaler', 'distributor', 'manufacturer'],
 
   EXCELLENT_THRESHOLD: {
-    retailer:     150,
-    wholesaler:   200,
-    distributor:  250,
-    manufacturer: 300,
-    team:         700,
+    retailer:     1500,
+    wholesaler:   2000,
+    distributor:  2500,
+    manufacturer: 3000,
+    team:         7000,
   },
 
   generateDemandCurve,

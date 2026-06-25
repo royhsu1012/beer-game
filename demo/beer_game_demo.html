@@ -62,28 +62,28 @@ function initSocket() {
   // 週結算（只收到自己的資料）
   socket.on('week_results', ({ week, mine, consumerDemand }) => {
     // 更新本地狀態
-    GS.roles[ROLE].inventory = mine.inventory
-    GS.roles[ROLE].backlog   = mine.backlog
+    GS.roles[ROLE].inventory = mine.inv
+    GS.roles[ROLE].backlog   = mine.bl
     GS.roles[ROLE].pipeline  = [0, 0]
     // 計算本週損益
     const sell = SELL_PRICE[ROLE]
-    const hc   = mine.inventory * HOLD_COST[ROLE]
-    const sc   = mine.backlog   * SHORT_COST[ROLE]
-    const revenue = mine.shipment * sell
+    const hc   = mine.inv  * HOLD_COST[ROLE]
+    const sc   = mine.bl   * SHORT_COST[ROLE]
+    const revenue = mine.sold * sell
     const weekProfit = revenue - hc - sc
     GS.roles[ROLE].cash   = (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit
     GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
     GS.week = week + 1
     // 建立 snap
     SNAP = { [ROLE]: {
-      wk: week, recv: mine.received, dem: mine.incomingDemand,
-      sold: mine.shipment, inv: mine.inventory, bl: mine.backlog,
-      ord: mine.orderPlaced, revenue, hc, sc, weekProfit,
+      wk: week, recv: mine.recv, dem: mine.dem,
+      sold: mine.sold, inv: mine.inv, bl: mine.bl,
+      ord: mine.ord, revenue, hc, sc, weekProfit,
       profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
     }}
     hCash.push(GS.roles[ROLE].cash)
-    hInv.push(mine.inventory)
-    hOrd.push(mine.orderPlaced)
+    hInv.push(mine.inv)
+    hOrd.push(mine.ord)
     refreshUI()
     startTimer()
   })
@@ -592,7 +592,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <span class="emoji">💰</span> 你的帳戶怎麼算？
     </div>
     <div style="font-size:13px;line-height:2.3">
-      <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px">$200</b></div>
+      <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px">$20000</b></div>
       <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
       <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
       <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
@@ -606,21 +606,21 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
         <span style="color:var(--yel);text-align:right">庫存費</span>
         <span style="color:var(--red);text-align:right">缺貨罰</span>
         <span><span class="emoji">🏪</span> 零售</span>
-        <b style="color:var(--blue);text-align:right">$3.00</b>
-        <span style="color:var(--yel);text-align:right">$0.10</span>
-        <span style="color:var(--red);text-align:right">$1.00</span>
+        <b style="color:var(--blue);text-align:right">$30</b>
+        <span style="color:var(--yel);text-align:right">$1</span>
+        <span style="color:var(--red);text-align:right">$10</span>
         <span><span class="emoji">📦</span> 批發</span>
-        <b style="color:var(--grn);text-align:right">$2.00</b>
-        <span style="color:var(--yel);text-align:right">$0.15</span>
-        <span style="color:var(--red);text-align:right">$0.70</span>
+        <b style="color:var(--grn);text-align:right">$20</b>
+        <span style="color:var(--yel);text-align:right">$2</span>
+        <span style="color:var(--red);text-align:right">$7</span>
         <span><span class="emoji">🚛</span> 分銷</span>
-        <b style="color:var(--yel);text-align:right">$1.40</b>
-        <span style="color:var(--yel);text-align:right">$0.20</span>
-        <span style="color:var(--red);text-align:right">$0.50</span>
+        <b style="color:var(--yel);text-align:right">$14</b>
+        <span style="color:var(--yel);text-align:right">$2</span>
+        <span style="color:var(--red);text-align:right">$5</span>
         <span><span class="emoji">🏭</span> 製造</span>
-        <b style="color:var(--red);text-align:right">$1.00</b>
-        <span style="color:var(--yel);text-align:right">$0.30</span>
-        <span style="color:var(--red);text-align:right">$0.30</span>
+        <b style="color:var(--red);text-align:right">$10</b>
+        <span style="color:var(--yel);text-align:right">$3</span>
+        <span style="color:var(--red);text-align:right">$3</span>
       </div>
     </div>
   </div>
@@ -728,7 +728,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     </div>
     <div style="text-align:right">
       <div style="font-size:11px;color:var(--c2)">帳戶餘額</div>
-      <div id="hud-cash" style="font-size:18px;font-weight:900;color:var(--grn)">$200</div>
+      <div id="hud-cash" style="font-size:18px;font-weight:900;color:var(--grn)">$2000</div>
     </div>
   </div>
 
@@ -748,7 +748,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
           本週 <span id="g-week-profit" style="font-size:13px;color:var(--grn)">—</span>
         </div>
       </div>
-      <div id="g-cash-big" style="font-size:42px;color:var(--grn);line-height:1;margin-bottom:8px" class="coinpop">$200</div>
+      <div id="g-cash-big" style="font-size:42px;color:var(--grn);line-height:1;margin-bottom:8px" class="coinpop">$2000</div>
       <div style="display:flex;justify-content:center;gap:16px;font-size:12px">
         <span style="color:var(--c2)">賣出 <span id="g-revenue" style="color:var(--grn)">—</span></span>
         <span style="color:var(--c2)">庫存費 <span id="g-hc" style="color:var(--red)">—</span></span>
@@ -876,9 +876,9 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div style="font-size:12px;color:var(--c2);margin-bottom:4px">
       你（<span id="db-myrole" style="color:var(--grn)"></span>）的最終帳戶
     </div>
-    <div id="db-cash" style="font-size:48px;line-height:1;margin-bottom:4px">$200</div>
+    <div id="db-cash" style="font-size:48px;line-height:1;margin-bottom:4px">$2000</div>
     <div style="font-size:13px;color:var(--c2);margin-bottom:8px">
-      起始 $200 → <span id="db-change" style="font-weight:700">±$0</span>
+      起始 $2000 → <span id="db-change" style="font-weight:700">±$0</span>
     </div>
     <div id="db-verdict" style="font-size:16px"></div>
     <div id="db-breakdown" style="font-size:12px;color:var(--c2);margin-top:8px;line-height:1.8"></div>
@@ -897,7 +897,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 
   <!-- 各角色帳戶排名 -->
   <div style="font-size:13px;color:var(--c2);margin-bottom:8px">
-    <span class="emoji">🏆</span> 各公司最終帳戶（起始 $200）
+    <span class="emoji">🏆</span> 各公司最終帳戶（起始 $2000）
   </div>
   <div id="db-rank" style="margin-bottom:14px"></div>
 
@@ -1018,29 +1018,29 @@ function genDemand(){
 // ═══════════════════════════════════════
 // 遊戲引擎（平衡版）
 // 各角色不同售價，越接近消費者越高
-// 起始資金 $200
+// 起始資金 $2000
 // ═══════════════════════════════════════
-const START_CAPITAL = 200
+const START_CAPITAL = 2000
 const WEEKS         = 20
 
 const ROLES=['retailer','wholesaler','distributor','manufacturer']
 
 // 各角色定價與成本（越接近消費者售價越高，但缺貨罰款也越重）
-const SELL_PRICE={retailer:3.00,wholesaler:2.00,distributor:1.40,manufacturer:1.00}
+const SELL_PRICE={retailer:30,wholesaler:20,distributor:14,manufacturer:10}
 
 // 庫存費（/箱/週）：越上游庫存越貴（倉儲/原料積壓成本高）
 const HOLD_COST={
-  retailer:    0.10,  // 貨架空間便宜
-  wholesaler:  0.15,  // 倉庫租金
-  distributor: 0.20,  // 物流中心倉租
-  manufacturer:0.30,  // 原料+機器佔用成本最高
+  retailer:    1,  // 貨架空間便宜
+  wholesaler:  2,  // 倉庫租金
+  distributor: 2,  // 物流中心倉租
+  manufacturer:3,  // 原料+機器佔用成本最高
 }
 // 缺貨罰款（/箱/週）：越接近消費者缺貨越貴（直接失去顧客）
 const SHORT_COST={
-  retailer:    1.00,  // 顧客跑掉，損失最大
-  wholesaler:  0.70,  // 零售商抱怨，關係受損
-  distributor: 0.50,  // 批發商延誤
-  manufacturer:0.30,  // 分銷商等一等還好
+  retailer:    10,  // 顧客跑掉，損失最大
+  wholesaler:   7,  // 零售商抱怨，關係受損
+  distributor:  5,  // 批發商延誤
+  manufacturer: 3,  // 分銷商等一等還好
 }
 
 const RCFG={
@@ -1050,10 +1050,10 @@ const RCFG={
     mission:'你的超市每週賣啤酒給消費者。\n消費者需求每週變化，你必須備好庫存！\n每箱賣出 $3.00，但囤太多或缺貨都會虧錢。',
     see:['消費者本週需求量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','上游任何資訊','下週需求'],
-    target:'起始 $200，優秀目標：帳戶 > $350\n（理性策略可達 $400-500）',
+    target:'起始 $2000，優秀目標：帳戶 > $3500\n（理性策略可達 $4000-5000）',
     tip:'需求波動時提前備貨最重要！缺貨罰款比庫存費更貴。',
     qlabel:'你要向批發商訂幾箱？',dlabel:'消費者需求',
-    threshold:350,
+    threshold:3500,
     hints:{5:'⚠️ 需求出現變化！快調整備貨策略。',10:'庫存和缺貨哪個更傷錢？看看你的本週結算！',16:'最後幾週，避免過度囤貨，別在結尾白付庫存費。'},
   },
   wholesaler:{
@@ -1062,10 +1062,10 @@ const RCFG={
     mission:'你的公司批發啤酒給零售商。\n每箱賣出 $2.00，成本比零售商低，但資訊也更少。\n小心：零售商的訂單可能比真實需求誇大很多！',
     see:['零售商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['零售商庫存','消費者真實需求','分銷商庫存'],
-    target:'起始 $200，優秀目標：帳戶 > $280\n（理性策略可達 $300-400）',
+    target:'起始 $2000，優秀目標：帳戶 > $2800\n（理性策略可達 $3000-4000）',
     tip:'零售商的訂單 ≠ 消費者需求！他們可能在恐慌下單，跟著亂補貨會虧大錢。',
     qlabel:'你要向分銷商訂幾箱？',dlabel:'零售商訂單',
-    threshold:280,
+    threshold:2800,
     hints:{5:'零售商突然大量下單？冷靜！先分析是真實需求還是恐慌？',8:'你的利潤還好嗎？庫存太多代表你被假需求騙了。',15:'庫存過多就減少下單，消化手上的貨先。'},
   },
   distributor:{
@@ -1074,10 +1074,10 @@ const RCFG={
     mission:'你的物流公司每箱賣 $1.40，沒有進貨成本。\n但你的訂單已被放大兩層，波動很劇烈！\n成為供應鏈的穩定器，你就能保住利潤。',
     see:['批發商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','零售商資訊','消費者需求'],
-    target:'起始 $200，優秀目標：帳戶 > $240\n（理性策略可達 $280-330）',
+    target:'起始 $2000，優秀目標：帳戶 > $2400\n（理性策略可達 $2800-3300）',
     tip:'設定目標庫存，每週固定用公式下單。不要跟著批發商的波動亂動！',
     qlabel:'你要向製造商訂幾箱？',dlabel:'批發商訂單',
-    threshold:240,
+    threshold:2400,
     hints:{5:'批發商大量下單？記住，他們可能也被零售商騙了！',10:'平穩下單的公司通常利潤最穩定。',15:'最後五週，用固定公式下單，別情緒化！'},
   },
   manufacturer:{
@@ -1086,10 +1086,10 @@ const RCFG={
     mission:'你的工廠每箱賣 $1.00，沒有進貨成本（自己生產）。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。',
     see:['分銷商本週訂單量','成品庫存','生產線數量','積壓訂單'],
     blind:['分銷商庫存','下游一切','消費者需求'],
-    target:'起始 $200，優秀目標：帳戶 > $220\n（理性策略可達 $250-300）',
+    target:'起始 $2000，優秀目標：帳戶 > $2200\n（理性策略可達 $2500-3000）',
     tip:'你看到的訂單已被放大 3 層，要打折看！平穩生產比大起大落更賺錢。',
     qlabel:'本週生產幾箱？',dlabel:'分銷商訂單',
-    threshold:220,
+    threshold:2200,
     hints:{5:'分銷商訂單跳了？先算：現有庫存 + 生產線夠嗎？別恐慌增產！',10:'生產量穩不穩定？大波動 = 大量庫存費或缺貨罰。',15:'快結束了！不要大量增產，那只會讓最後幾週付大量庫存費。'},
   },
 }
@@ -1466,7 +1466,7 @@ function showDebrief(){
   const demMax=Math.max(...GS.curve)
   const bestRole=sorted[0],worstRole=sorted[sorted.length-1]
   // 供應鏈總收益計算
-  const totalStartCash = 200 * 4  // 四角色起始合計
+  const totalStartCash = 2000 * 4  // 四角色起始合計
   const totalFinalCash = ROLES.reduce((s,r)=>s+res[r].cash, 0)
   const totalChange = totalFinalCash - totalStartCash
   document.getElementById('db-total-cash').textContent = `$${totalFinalCash.toFixed(0)}`

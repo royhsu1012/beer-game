@@ -71,16 +71,16 @@ function processWeek(state, orders) {
   for (const role of ROLES) {
     const newCumCost = state.roles[role].cumulativeCost + costs[role].weekCost
     weekSnapshot[role] = {
-      week,
-      received:       received[role],
-      incomingDemand: incomingDemand[role],
+      wk:             week,
+      recv:           received[role],
+      dem:            incomingDemand[role],
       totalDemand:    totalDemand[role],
-      shipment:       shipment[role],
-      inventory:      inventoryAfterShipping[role],
-      backlog:        newBacklog[role],
-      orderPlaced:    orders[role],
-      holdingCost:    costs[role].holdingCost,
-      shortageCost:   costs[role].shortageCost,
+      sold:           shipment[role],
+      inv:            inventoryAfterShipping[role],
+      bl:             newBacklog[role],
+      ord:            orders[role],
+      hc:             costs[role].holdingCost,
+      sc:             costs[role].shortageCost,
       weekCost:       costs[role].weekCost,
       cumulativeCost: newCumCost
     }
@@ -111,8 +111,8 @@ function calculateResults(finalState) {
   for (const role of ROLES) {
     const history = finalState.roles[role].weeklyHistory
     const totalCost = finalState.roles[role].cumulativeCost
-    const shortageWeeks = history.filter(w => w.backlog > 0).length
-    const orders = history.map(w => w.orderPlaced)
+    const shortageWeeks = history.filter(w => w.bl > 0).length
+    const orders = history.map(w => w.ord)
     const avg = orders.reduce((a, b) => a + b, 0) / orders.length
     const orderSD = Math.sqrt(orders.reduce((s, o) => s + Math.pow(o - avg, 2), 0) / orders.length)
     teamTotal += totalCost

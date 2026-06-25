@@ -32,7 +32,7 @@ function broadcastRoom(roomCode) {
 
 function getLastOrder(room, role) {
   const history = room.gameState.roles[role].weeklyHistory
-  return history.length > 0 ? history[history.length - 1].orderPlaced : 4
+  return history.length > 0 ? history[history.length - 1].ord : 4
 }
 
 function resolveWeek(roomCode) {
@@ -59,7 +59,7 @@ function resolveWeek(roomCode) {
   // Send each player only their own data
   room.players.forEach(player => {
     io.to(player.socketId).emit('week_results', {
-      week: weekSnapshot[player.role].week,
+      week: weekSnapshot[player.role].wk,
       mine: weekSnapshot[player.role],
       consumerDemand
     })
