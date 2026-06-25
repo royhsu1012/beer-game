@@ -1286,13 +1286,13 @@ function processWeek(state,orders){
 }
 
 function auto(role,state){
-  // AI 也只用自己看到的歷史需求，不偷看真實需求曲線
   const rs=state.roles[role]
   const it=rs.pipeline[0]+rs.pipeline[1]
   const recent=rs.history.slice(-3).map(h=>h.dem)
   const avg=recent.length>0 ? recent.reduce((a,b)=>a+b,0)/recent.length : 4
-  const target=Math.round(avg*1.5)
-  return Math.max(0,target-rs.inventory-it+rs.backlog)
+  const suggested=Math.max(0,Math.round(avg*1.5)-rs.inventory-it+rs.backlog)
+  const noise=Math.floor(Math.random()*5)-2  // -2 ~ +2
+  return Math.max(0,suggested+noise)
 }
 
 // ═══════════════════════════════════════
