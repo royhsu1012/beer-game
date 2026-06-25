@@ -783,7 +783,6 @@ function initSocket() {
 
   // 週結算：只更新狀態，等 week_started 再刷 UI
   socket.on('week_results', ({ week, mine, consumerDemand }) => {
-    console.log('[DBG] week_results received week=' + week)
     try {
       const revenue     = mine.sold * SELL_PRICE[ROLE]
       const procurement = mine.ord  * BUY_PRICE[ROLE]
@@ -816,7 +815,6 @@ function initSocket() {
 
   // 下週開始
   socket.on('week_started', ({ week, inventory, backlog, pipeline0, pipeline1 }) => {
-    console.log('[DBG] week_started received week=' + week)
     try {
       GS.roles[ROLE].inventory = inventory
       GS.roles[ROLE].backlog   = backlog
@@ -1582,9 +1580,7 @@ function doSubmit(qty){
   waitEl.innerHTML='<div class="pbox" style="padding:16px;text-align:center"><div style="font-size:15px;color:var(--grn)">✅ 已提交 <span id="g-sub-n">'+qty+'</span> 箱</div><div style="font-size:12px;color:var(--c2);margin-top:6px">計算中...</div></div>'
   waitEl.style.display='block'
   if(multiMode){
-    console.log('[DBG] emit submit_order qty=' + qty)
     socket.emit('submit_order',{quantity:qty},(res)=>{
-      console.log('[DBG] submit_order ack:', JSON.stringify(res))
       if(res.error){
         document.getElementById('g-wait').style.display='none'
         document.getElementById('g-az').style.display='block'
