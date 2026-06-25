@@ -79,26 +79,29 @@ function initSocket() {
 
   // 遊戲開始
   socket.on('game_started', ({ role, week, timeLimit, inventory, backlog, pipeline0, pipeline1 }) => {
-    sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role }))
-    ROLE = role
-    multiMode = true
-    const dem = genDemand()
-    GS = initState(dem)
-    // 用伺服器的初始狀態覆蓋
-    GS.roles[ROLE].inventory = inventory
-    GS.roles[ROLE].backlog = backlog
-    GS.roles[ROLE].pipeline = [pipeline0, pipeline1]
-    SNAP = null; hCash = []; hInv = []; hOrd = []
-    const cfg = RCFG[ROLE]
-    document.getElementById('hud-role').textContent = cfg.emoji + ' ' + cfg.name
-    document.getElementById('hud-role').style.color = cfg.color
-    document.getElementById('g-azq').textContent = cfg.qlabel
-    document.getElementById('g-dlabel').textContent = cfg.dlabel
-    document.getElementById('g-sell-badge').textContent = '$' + SELL_PRICE[ROLE] + '/箱'
-    setTimeout(() => drawSpr('g-spr', ROLE, 40, 48), 30)
-    show('game')
-    startTimer()
-    refreshUI()
+    try {
+      sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role }))
+      ROLE = role
+      multiMode = true
+      const dem = genDemand()
+      GS = initState(dem)
+      GS.roles[ROLE].inventory = inventory
+      GS.roles[ROLE].backlog = backlog
+      GS.roles[ROLE].pipeline = [pipeline0, pipeline1]
+      SNAP = null; hCash = []; hInv = []; hOrd = []
+      const cfg = RCFG[ROLE]
+      document.getElementById('hud-role').textContent = cfg.emoji + ' ' + cfg.name
+      document.getElementById('hud-role').style.color = cfg.color
+      document.getElementById('g-azq').textContent = cfg.qlabel
+      document.getElementById('g-dlabel').textContent = cfg.dlabel
+      document.getElementById('g-sell-badge').textContent = '$' + SELL_PRICE[ROLE] + '/箱'
+      setTimeout(() => drawSpr('g-spr', ROLE, 40, 48), 30)
+      show('game')
+      startTimer()
+      refreshUI()
+    } catch(e) {
+      showRoomErr('game_started 錯誤: ' + e.message)
+    }
   })
 
   // 週結算（只收到自己的資料）
