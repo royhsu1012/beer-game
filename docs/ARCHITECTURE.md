@@ -5,17 +5,15 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    玩家端（瀏覽器）                        │
-│                                                           │
-│  React + Vite          Socket.io-client                  │
-│  Cubic 11 字體          WebSocket 連線                    │
-│  Canvas Pixel Art       即時雙向通信                      │
+│  demo/beer_game_demo.html（單一 HTML 檔案）               │
+│  Canvas Pixel Art・Cubic 11 字體・Web Audio API          │
+│  Socket.io-client（多人模式）                             │
 └──────────────────────────┬────────────────────────────────┘
-                           │ WebSocket
+                           │ WebSocket (Socket.io)
 ┌──────────────────────────┴────────────────────────────────┐
 │                    後端（Node.js）                         │
-│                                                           │
-│  Express HTTP 服務                                        │
-│  Socket.io 事件處理                                       │
+│  Express HTTP + CORS                                       │
+│  Socket.io 事件處理                                        │
 │  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐  │
 │  │ RoomManager  │  │ GameEngine   │  │  gameConfig    │  │
 │  │（記憶體 Map） │  │ （純函數）   │  │ （需求生成）   │  │
@@ -23,88 +21,137 @@
 └───────────────────────────────────────────────────────────┘
 ```
 
+**部署：**
+- 前端：GitHub Pages（`demo/` 目錄）
+- 後端：Render 免費方案
+
+---
+
 ## 資訊隔離機制
 
-這是整個設計的核心，確保每個玩家只能看到自己的數據：
+每週結算後，逐個 socket 發送，而非廣播，確保每個玩家只能看到自己的數據：
 
 ```javascript
-// server/src/index.js
-// 每週結算後，逐個 socket 發送，而非廣播
-room.players.forEach(player => {
+// server/src/index.js - resolveWeek()
+room.players.filter(p => !p.isBot).forEach(player => {
   io.to(player.socketId).emit('week_results', {
-    week: snap[player.role].week,
-    mine: snap[player.role],      // 只有自己的數據
-    consumerDemand: consumerDemand // 零售商需求對所有人公開
+    week: weekSnapshot[player.role].wk,
+    mine: weekSnapshot[player.role],  // 只有自己角色的數據
+    consumerDemand                     // 消費者需求對所有人公開
   })
 })
 ```
+
+---
 
 ## 遊戲引擎（純函數設計）
 
 ```
 GameEngine.js
 │
-├── initGameState(demandData)
+├── initGameState()
 │   └── 初始化四角色狀態（庫存12、積壓0、管道[4,4]）
-│   └── 綁定本局需求曲線
+│   └── 用 generateDemandCurve() 生成本局需求曲線
 │
-├── processWeek(state, orders) → { newState, snap, cd }
+├── processWeek(state, orders) → { newState, weekSnapshot, consumerDemand }
 │   ├── Step 1: 接收到貨（取 pipeline[0]）
-│   ├── Step 2: 庫存加上到貨
-│   ├── Step 3: 計算總需求（含積壓）
-│   ├── Step 4: 出貨（min(庫存, 需求)）
-│   ├── Step 5: 計算成本（持有 + 缺貨）
-│   └── Step 6: 推進管道（[pipeline[1], 新訂單]）
+│   ├── Step 2: 計算總需求（incoming + 積壓）
+│   ├── Step 3: 出貨（min(庫存+到貨, 總需求)）
+│   ├── Step 4: 計算成本（持有 + 缺貨）
+│   ├── Step 5: 推進管道（[pipeline[1], 新訂單]）
+│   └── Step 6: 累計成本、記錄週歷史
 │
 └── calculateResults(finalState) → rankings
-    └── 排名、達標判定、需求模式標籤
+    └── 排名、達標判定、需求模式標籤、全歷史
 ```
 
-## 需求曲線生成公式
+---
+
+## 需求曲線生成
 
 ```javascript
-// gameConfig.js - generateDemandCurve()
+// gameConfig.js - generateDemandCurve(seed)
 需求[t] = base
         + amp1 × sin(2π × t / period1 + phase1)   // 主季節週期
         + amp2 × sin(2π × t / period2 + phase2)   // 次諧波
         + trend × t                                 // 長期趨勢
         + noiseAmp × random()                      // 白噪音
-        + Σ shocks[i].magnitude × decay(t)        // 突發衝擊
+        + Σ shocks[i].magnitude × decay(dist)     // 突發衝擊（1-3個）
 ```
 
-參數範圍：
-- `base`: 3.5 ~ 5.5 箱
-- `amp1`: 1.8 ~ 4.2 箱
-- `period1`: 6 ~ 14 週
-- `trend`: -0.1 ~ +0.15
-- `shockCount`: 0 ~ 2 個
+使用 LCG（線性同餘隨機數生成器）確保種子可重現。
+需求模式在遊戲結束複盤時才揭露。
 
-## Socket.io 房間生命週期
+---
+
+## 房間生命週期
 
 ```
-create_room → 玩家1建立房間，取得6位房間碼
-join_room   → 玩家2/3/4輸入房間碼加入
-select_role → 各玩家選擇角色（不可重複）
-start_game  → 任意玩家觸發，四角色就位即可（最少2人）
-              └→ initGameState() 建立本局遊戲狀態
-              └→ 逐人發送 game_started（含個人初始狀態）
-              └→ 啟動第一週計時器（60秒）
+create_room  → 生成6位房間碼，creatorId 記錄房主
+join_room    → 加入，上限4人
+add_bot      → 為空缺角色加入 Bot
+select_role  → 選擇角色（不可重複）
+start_game   → 須所有位置都有角色（人或Bot，最少2個）
+               └→ initGameState() 建立本局遊戲狀態
+               └→ 逐人發送 game_started（含個人初始狀態）
+               └→ startRoundTimer(60s)
 
 [每週迴圈]
 submit_order → 玩家提交訂單
-              └→ 若全員提交：立刻結算
-              └→ 若計時到：自動補齊未提交者（沿用上週）
-              └→ processWeek() 計算結果
-              └→ 逐人發送 week_results（只有自己的數據）
-              └→ 若 week >= 20：game_finished（首次揭露所有數據）
+               └→ Bot 自動計算訂單
+               └→ 若全人類玩家都提交：立刻結算
+               └→ 若計時到：自動補齊未提交者（沿用上週）
+               └→ processWeek() 計算結果（try-catch 保護）
+               └→ 逐人發送 week_results（只有自己的數據）
+               └→ 廣播 week_started（各人收到自己的狀態）
+               └→ 若 week >= 20：game_finished（揭露所有數據）
+
+[遊戲結束]
+return_to_room → 房主重開遊戲室（resetRoom），所有人回到等待室
+disconnect     → 若房主在 finished 狀態離開：emit host_left
 ```
 
-## 前端狀態流
+---
+
+## Bot 機制
+
+```javascript
+// server/src/index.js - calcBotOrder()
+function calcBotOrder(roleState) {
+  const recentDemands = roleState.weeklyHistory.slice(-3).map(h => h.dem)
+  const avgDemand = recentDemands.length > 0
+    ? average(recentDemands) : 4
+  const inTransit = roleState.pipeline[0] + roleState.pipeline[1]
+  const suggested = Math.round(avgDemand * 1.5)
+    - roleState.inventory - inTransit + roleState.backlog
+  return Math.max(0, suggested + Math.floor(Math.random() * 5) - 2)
+}
+```
+
+---
+
+## 斷線重連流程
 
 ```
-Home.jsx ──(create/join)──→ Room.jsx ──(game_started)──→ Game.jsx ──(game_finished)──→ Debrief.jsx
-                                                              ↑
-                                                         WebSocket 事件驅動
-                                                         week_started / week_results
-                                                         submission_progress
+disconnect（playing 狀態）
+  → player.socketId = null, player.disconnected = true
+  → 廣播 player_disconnected
+  → 設 60 秒 reconnectTimer
+
+reconnect_game（60秒內）
+  → 更新 player.socketId，清除 reconnectTimer
+  → socket.join(roomCode)
+  → emit game_resumed（含當週狀態與歷史）
+
+reconnectTimer 到期（60秒後）
+  → player.isBot = true（Bot 接管）
+  → 廣播 player_reconnected（timedOut: true）
 ```
+
+---
+
+## 錯誤處理
+
+- `resolveWeek()` 整體包在 try-catch 中，拋錯時 emit `server_error` 給整個房間
+- 客戶端 `week_started` 的 catch 會重設 `submitting = false` 並顯示 g-az，防止 UI 永久凍結
+- 客戶端有 `server_error` handler，收到後解凍 UI 並顯示錯誤訊息
