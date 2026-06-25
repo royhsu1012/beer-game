@@ -21,6 +21,12 @@ if (process.env.RENDER_EXTERNAL_URL) {
   }, 14 * 60 * 1000)
 }
 
+function log(event, data = {}) {
+  const ts = new Date().toISOString().slice(11, 19)
+  const parts = Object.entries(data).map(([k, v]) => `${k}=${v}`).join(' ')
+  console.log(`[${ts}] ${event}${parts ? ' ' + parts : ''}`)
+}
+
 function broadcastRoom(roomCode) {
   const room = getRoom(roomCode)
   if (!room) return
@@ -38,7 +44,7 @@ function calcBotOrder(roleState) {
     : 4
   const inTransit = roleState.pipeline[0] + roleState.pipeline[1]
   const suggested = Math.round(avgDemand * 1.5) - roleState.inventory - inTransit + roleState.backlog
-  const noise = Math.floor(Math.random() * 5) - 2  // -2 ~ +2
+  const noise = Math.floor(Math.random() * 5) - 2
   return Math.max(0, suggested + noise)
 }
 
@@ -51,21 +57,18 @@ function resolveWeek(roomCode) {
   const room = getRoom(roomCode)
   if (!room || room.status !== 'playing') return
 
-  // Bot players: calculate order from suggestion formula
   for (const player of room.players.filter(p => p.isBot)) {
     if (room.gameState.pendingOrders[player.role] === undefined) {
       room.gameState.pendingOrders[player.role] = calcBotOrder(room.gameState.roles[player.role])
     }
   }
 
-  // Auto-fill missing orders (disconnected humans) with last week's order
   const playerRoles = room.players.filter(p => !p.isBot).map(p => p.role)
   for (const role of playerRoles) {
     if (room.gameState.pendingOrders[role] === undefined) {
       room.gameState.pendingOrders[role] = getLastOrder(room, role)
     }
   }
-  // Fill unplayed roles with 4
   for (const role of ROLES) {
     if (room.gameState.pendingOrders[role] === undefined) {
       room.gameState.pendingOrders[role] = 4
@@ -74,8 +77,8 @@ function resolveWeek(roomCode) {
 
   const { newState, weekSnapshot, consumerDemand } = processWeek(room.gameState, room.gameState.pendingOrders)
   room.gameState = newState
+  log('week_resolved', { room: roomCode, week: weekSnapshot[ROLES[0]].wk })
 
-  // Send each human player only their own data
   room.players.filter(p => !p.isBot).forEach(player => {
     io.to(player.socketId).emit('week_results', {
       week: weekSnapshot[player.role].wk,
@@ -90,10 +93,10 @@ function resolveWeek(roomCode) {
     for (const role of ROLES) fullHistory[role] = newState.roles[role].weeklyHistory
     io.to(roomCode).emit('game_finished', { results, fullHistory })
     room.status = 'finished'
+    log('game_finished', { room: roomCode })
     return
   }
 
-  // Start next week (human players only)
   room.players.filter(p => !p.isBot).forEach(player => {
     const roleState = newState.roles[player.role]
     io.to(player.socketId).emit('week_started', {
@@ -116,13 +119,22 @@ function startRoundTimer(roomCode) {
   room.timerHandle = setTimeout(() => resolveWeek(roomCode), ROUND_TIME_SECONDS * 1000)
 }
 
+function cleanupRoom(roomCode) {
+  const room = getRoom(roomCode)
+  if (!room) return
+  if (room.timerHandle) clearTimeout(room.timerHandle)
+  // RoomManager.removePlayer already deletes the room when empty
+}
+
 io.on('connection', (socket) => {
+  log('connect', { id: socket.id })
 
   socket.on('create_room', ({ name }, cb) => {
     const room = createRoom(socket.id, name)
     const result = addPlayer(room.code, socket.id, name)
     if (result.error) return cb({ error: result.error })
     socket.join(room.code)
+    log('create_room', { room: room.code, name })
     cb({ roomCode: room.code })
     broadcastRoom(room.code)
   })
@@ -132,6 +144,7 @@ io.on('connection', (socket) => {
     const result = addPlayer(code, socket.id, name)
     if (result.error) return cb({ error: result.error })
     socket.join(code)
+    log('join_room', { room: code, name })
     cb({ ok: true })
     broadcastRoom(code)
   })
@@ -162,6 +175,7 @@ io.on('connection', (socket) => {
     const result = startGame(code)
     if (result.error) return cb({ error: result.error })
     const room = result.room
+    log('game_started', { room: code, players: room.players.length })
     room.players.filter(p => !p.isBot).forEach(player => {
       const roleState = room.gameState.roles[player.role]
       io.to(player.socketId).emit('game_started', {
@@ -203,6 +217,7 @@ io.on('connection', (socket) => {
     const { room, player } = result
     if (player.reconnectTimer) { clearTimeout(player.reconnectTimer); player.reconnectTimer = null }
     socket.join(code)
+    log('reconnect', { room: code, name, role })
 
     const roleState = room.gameState.roles[role]
     cb({ ok: true })
@@ -220,20 +235,25 @@ io.on('connection', (socket) => {
   })
 
   socket.on('disconnect', () => {
+    log('disconnect', { id: socket.id })
     const found = findPlayerRoom(socket.id)
     if (!found) return
     const { code, room } = found
     const result = removePlayer(code, socket.id)
-    if (room && room.status === 'waiting') broadcastRoom(code)
+    if (room && room.status === 'waiting') {
+      if (getRoom(code)) broadcastRoom(code)
+      else cleanupRoom(code)
+      return
+    }
     if (room && room.status === 'playing' && result?.disconnected) {
       const player = result.disconnected
       io.to(code).emit('player_disconnected', { name: player.name, role: player.role })
-      // 60s 後自動轉 bot
       player.reconnectTimer = setTimeout(() => {
         if (player.disconnected) {
           player.isBot = true
           player.disconnected = false
           player.name = '電腦'
+          log('bot_takeover', { room: code, role: player.role })
           io.to(code).emit('player_reconnected', { name: player.name, timedOut: true })
         }
       }, 60 * 1000)
@@ -242,4 +262,4 @@ io.on('connection', (socket) => {
 })
 
 const PORT = process.env.PORT || 8080
-server.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`))
+server.listen(PORT, () => log('server_start', { port: PORT }))

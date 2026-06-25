@@ -1521,12 +1521,22 @@ function submitOrder(){
   doSubmit(v)
 }
 function doSubmit(qty){
-  qty=Math.max(0,Math.round(qty))
+  qty=Math.min(Math.max(0,Math.round(qty)),getMaxOrder())
   clearInterval(timerID)
   document.getElementById('hud-timer').classList.remove('blink')
   document.getElementById('g-az').style.display='none'
   document.getElementById('g-wait').style.display='block'
   document.getElementById('g-sub-n').textContent=qty
+  if(multiMode){
+    socket.emit('submit_order',{quantity:qty},(res)=>{
+      if(res.error){
+        document.getElementById('g-wait').style.display='none'
+        document.getElementById('g-az').style.display='block'
+        showRoomErr('提交失敗：'+res.error)
+      }
+    })
+    return
+  }
   const ao={};for(const r of ROLES)if(r!==ROLE)ao[r]=auto(r,GS)
   const all={...ao,[ROLE]:qty}
   setTimeout(()=>{
@@ -1669,6 +1679,7 @@ function restart(){clearInterval(timerID);sessionStorage.removeItem('bgg');GS=nu
 
 document.addEventListener('DOMContentLoaded',()=>{
   initHome()
+  drawMug('lobby-mug')
   document.getElementById('g-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitOrder()})
 
   // 即時顯示訂單金額 + 帳戶預估
@@ -1690,29 +1701,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     remainEl.style.color=estimated>=0?'var(--grn)':'var(--red)'
   })
 })
-</script>
-<script>
-// 此 script 放最後，確保兩個主 script block 都已載入
-// doSubmit 多人覆寫
-const _origDoSubmit = doSubmit
-window.doSubmit = function(qty) {
-  if (!multiMode) { _origDoSubmit(qty); return }
-  qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
-  clearInterval(timerID)
-  document.getElementById('hud-timer').classList.remove('blink')
-  document.getElementById('g-az').style.display = 'none'
-  document.getElementById('g-wait').style.display = 'block'
-  document.getElementById('g-sub-n').textContent = qty
-  socket.emit('submit_order', { quantity: qty }, (res) => {
-    if (res.error) {
-      document.getElementById('g-wait').style.display = 'none'
-      document.getElementById('g-az').style.display = 'block'
-      showRoomErr('提交失敗：' + res.error)
-    }
-  })
-}
-// 大廳啤酒杯
-drawMug('lobby-mug')
 </script>
 </body>
 </html>
