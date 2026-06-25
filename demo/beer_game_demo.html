@@ -118,14 +118,12 @@ function initSocket() {
     SNAP = { [ROLE]: {
       wk: week, recv: mine.recv, dem: mine.dem,
       sold: mine.sold, inv: mine.inv, bl: mine.bl,
-      ord: mine.ord, revenue, hc, sc, weekProfit,
+      ord: mine.ord, revenue, hc: mine.hc, sc: mine.sc, weekProfit,
       profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
     }}
     hCash.push(GS.roles[ROLE].cash)
     hInv.push(mine.inv)
     hOrd.push(mine.ord)
-    refreshUI()
-    startTimer()
   })
 
   // 下週開始
