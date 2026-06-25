@@ -4,6 +4,294 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>🍺 啤酒供應鏈遊戲</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js">
+// ═══════════════════════════════════════════════════════════════
+// 多人房間制（Socket.io）
+// ═══════════════════════════════════════════════════════════════
+
+const SERVER_URL = 'https://beer-game-server.onrender.com'
+let socket = null
+let myRoomCode = null
+let myName = null
+let isHost = false
+let myRole = null
+let multiMode = false  // true=多人, false=單人
+
+const ROLE_CFG_MULTI = {
+  retailer:    { label:'🏪 零售商', color:'var(--blue)' },
+  wholesaler:  { label:'📦 批發商', color:'var(--grn)'  },
+  distributor: { label:'🚛 分銷商', color:'var(--yel)'  },
+  manufacturer:{ label:'🏭 製造商', color:'var(--red)'  },
+}
+
+function initSocket() {
+  if (socket) return
+  socket = io(SERVER_URL, { autoConnect: true, reconnectionAttempts: 5 })
+
+  socket.on('connect', () => console.log('✅ 已連線伺服器'))
+  socket.on('connect_error', () => showLobbyErr('無法連接伺服器，請稍後再試'))
+
+  // 房間狀態更新（有人加入/選角色）
+  socket.on('room_updated', ({ players, status }) => {
+    renderRoomPlayers(players, status)
+  })
+
+  // 遊戲開始
+  socket.on('game_started', ({ role, week, timeLimit, inventory, backlog, pipeline0, pipeline1 }) => {
+    ROLE = role
+    multiMode = true
+    const dem = genDemand()
+    GS = initState(dem)
+    // 用伺服器的初始狀態覆蓋
+    GS.roles[ROLE].inventory = inventory
+    GS.roles[ROLE].backlog = backlog
+    GS.roles[ROLE].pipeline = [pipeline0, pipeline1]
+    SNAP = null; hCash = []; hInv = []; hOrd = []
+    const cfg = RCFG[ROLE]
+    document.getElementById('hud-role').textContent = cfg.emoji + ' ' + cfg.name
+    document.getElementById('hud-role').style.color = cfg.color
+    document.getElementById('g-azq').textContent = cfg.qlabel
+    document.getElementById('g-dlabel').textContent = cfg.dlabel
+    document.getElementById('g-sell-badge').textContent = '$' + SELL_PRICE[ROLE] + '/箱'
+    setTimeout(() => drawSpr('g-spr', ROLE, 40, 48), 30)
+    show('game')
+    startTimer()
+    refreshUI()
+  })
+
+  // 週結算（只收到自己的資料）
+  socket.on('week_results', ({ week, mine, consumerDemand }) => {
+    // 更新本地狀態
+    GS.roles[ROLE].inventory = mine.inventory
+    GS.roles[ROLE].backlog   = mine.backlog
+    GS.roles[ROLE].pipeline  = [0, 0]
+    // 計算本週損益
+    const sell = SELL_PRICE[ROLE]
+    const hc   = mine.inventory * HOLD_COST[ROLE]
+    const sc   = mine.backlog   * SHORT_COST[ROLE]
+    const revenue = mine.shipment * sell
+    const weekProfit = revenue - hc - sc
+    GS.roles[ROLE].cash   = (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit
+    GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
+    GS.week = week + 1
+    // 建立 snap
+    SNAP = { [ROLE]: {
+      wk: week, recv: mine.received, dem: mine.incomingDemand,
+      sold: mine.shipment, inv: mine.inventory, bl: mine.backlog,
+      ord: mine.orderPlaced, revenue, hc, sc, weekProfit,
+      profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
+    }}
+    hCash.push(GS.roles[ROLE].cash)
+    hInv.push(mine.inventory)
+    hOrd.push(mine.orderPlaced)
+    refreshUI()
+    startTimer()
+  })
+
+  // 下週開始
+  socket.on('week_started', ({ week, inventory, backlog, pipeline0, pipeline1 }) => {
+    GS.roles[ROLE].inventory = inventory
+    GS.roles[ROLE].backlog   = backlog
+    GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
+    GS.week = week
+    refreshUI()
+    startTimer()
+  })
+
+  // 遊戲結束
+  socket.on('game_finished', ({ results, fullHistory }) => {
+    GS.status = 'done'
+    // 把其他角色資料填入 GS 供複盤用
+    for (const role of ROLES) {
+      if (results[role]) {
+        GS.roles[role].cash = results[role].finalCash || START_CAPITAL - results[role].totalCost
+        GS.roles[role].profit = GS.roles[role].cash - START_CAPITAL
+        GS.roles[role].history = fullHistory[role] || []
+      }
+    }
+    showDebrief()
+  })
+
+  // 進度（幾人已提交）
+  socket.on('submission_progress', ({ submittedCount, totalPlayers }) => {
+    const waitEl = document.getElementById('g-wait')
+    if (waitEl.style.display !== 'none') {
+      waitEl.innerHTML = `
+        <div class="pbox" style="padding:16px;text-align:center">
+          <div style="font-size:15px;color:var(--grn)">✅ 已提交</div>
+          <div style="font-size:12px;color:var(--c2);margin-top:6px">等待其他玩家 ${submittedCount}/${totalPlayers}</div>
+        </div>`
+    }
+  })
+}
+
+// 大廳操作
+function showLobbyErr(msg) {
+  document.getElementById('lobby-err').textContent = msg
+  setTimeout(() => document.getElementById('lobby-err').textContent = '', 3000)
+}
+function showRoomErr(msg) {
+  document.getElementById('room-err').textContent = msg
+  setTimeout(() => document.getElementById('room-err').textContent = '', 3000)
+}
+
+function doCreateRoom() {
+  const name = document.getElementById('lobby-name').value.trim()
+  if (!name) { showLobbyErr('請先輸入名稱'); return }
+  myName = name
+  initSocket()
+  socket.emit('create_room', { name }, (res) => {
+    if (res.error) { showLobbyErr('建立失敗：' + res.error); return }
+    myRoomCode = res.roomCode
+    isHost = true
+    enterRoom()
+  })
+}
+
+function doJoinRoom() {
+  const name = document.getElementById('lobby-name').value.trim()
+  const code = document.getElementById('lobby-code').value.trim().toUpperCase()
+  if (!name) { showLobbyErr('請先輸入名稱'); return }
+  if (code.length !== 6) { showLobbyErr('房間代碼為 6 位數'); return }
+  myName = name
+  initSocket()
+  socket.emit('join_room', { roomCode: code, name }, (res) => {
+    if (res.error) {
+      const msgs = { ROOM_NOT_FOUND:'找不到房間', GAME_ALREADY_STARTED:'遊戲已開始', ROOM_FULL:'房間已滿' }
+      showLobbyErr(msgs[res.error] || res.error); return
+    }
+    myRoomCode = code
+    isHost = false
+    enterRoom()
+  })
+}
+
+function enterRoom() {
+  document.getElementById('room-code-display').textContent = myRoomCode
+  renderRoleBtns([])
+  show('room')
+  document.getElementById('lobby-mug') && drawMug('lobby-mug')
+}
+
+function copyRoomCode() {
+  navigator.clipboard.writeText(myRoomCode).catch(() => {})
+  const btn = event.target.closest('button')
+  btn.textContent = '✅ 已複製！'
+  setTimeout(() => btn.innerHTML = '<span class="emoji">📋</span> 複製代碼', 1500)
+}
+
+function renderRoleBtns(players) {
+  const takenRoles = players.filter(p => p.role).map(p => p.role)
+  const myPlayer   = players.find(p => p.name === myName)
+  myRole = myPlayer?.role || null
+
+  const container = document.getElementById('role-btns')
+  container.innerHTML = ''
+  for (const [role, cfg] of Object.entries(ROLE_CFG_MULTI)) {
+    const isTaken = takenRoles.includes(role) && role !== myRole
+    const isMine  = role === myRole
+    const owner   = players.find(p => p.role === role)
+    const btn = document.createElement('button')
+    btn.className = 'role-btn' + (isTaken ? ' taken' : '') + (isMine ? ' mine' : '')
+    btn.style.color = cfg.color
+    btn.style.borderColor = cfg.color
+    btn.innerHTML = `
+      <div style="font-size:14px">${cfg.label}</div>
+      <div style="font-size:11px;color:var(--c2);margin-top:4px">${
+        isMine ? '✅ 你選的' : isTaken ? owner.name : '空位'
+      }</div>`
+    if (!isTaken) btn.onclick = () => selectRoleMulti(role)
+    container.appendChild(btn)
+  }
+}
+
+function renderRoomPlayers(players, status) {
+  renderRoleBtns(players)
+  document.getElementById('player-count').textContent = players.length
+
+  const list = document.getElementById('player-list')
+  list.innerHTML = players.map(p => {
+    const isMe = p.name === myName
+    const roleCfg = p.role ? ROLE_CFG_MULTI[p.role] : null
+    return `<div class="player-slot ${p.role ? 'filled' : ''} ${isMe ? 'mine' : ''}">
+      <span style="font-size:16px">${isMe ? '👤' : '🧑'}</span>
+      <span style="flex:1;font-size:13px">${p.name}${isMe ? ' (你)' : ''}</span>
+      <span style="font-size:12px;color:${roleCfg?.color || 'var(--c2)'}">
+        ${roleCfg ? roleCfg.label : '未選角色'}
+      </span>
+    </div>`
+  }).join('')
+
+  // 開始按鈕邏輯
+  const startBtn = document.getElementById('start-btn')
+  const hint     = document.getElementById('start-hint')
+  const allChosen = players.length >= 2 && players.every(p => p.role)
+  if (isHost) {
+    startBtn.style.display = allChosen ? 'block' : 'none'
+    hint.textContent = allChosen ? '' :
+      players.length < 2 ? '等待更多玩家加入（至少2人）' : '等待所有玩家選好角色'
+  } else {
+    startBtn.style.display = 'none'
+    hint.textContent = '等待房主開始遊戲...'
+  }
+}
+
+function selectRoleMulti(role) {
+  socket.emit('select_role', { roomCode: myRoomCode, role }, (res) => {
+    if (res.error) {
+      const msgs = { ROLE_TAKEN:'角色已被選走', INVALID_ROLE:'無效角色' }
+      showRoomErr(msgs[res.error] || res.error)
+    }
+  })
+}
+
+function doStartGame() {
+  socket.emit('start_game', { roomCode: myRoomCode }, (res) => {
+    if (res.error) {
+      const msgs = { NOT_ENOUGH_PLAYERS:'至少需要2名玩家', NOT_ALL_ROLES_ASSIGNED:'還有玩家未選角色' }
+      showRoomErr(msgs[res.error] || res.error)
+    }
+  })
+}
+
+function leaveRoom() {
+  if (socket) { socket.disconnect(); socket = null }
+  myRoomCode = null; isHost = false; myRole = null; multiMode = false
+  show('lobby')
+  drawMug('lobby-mug')
+}
+
+function goSinglePlayer() {
+  multiMode = false
+  show('home')
+  initHome()
+}
+
+// 覆寫 doSubmit：多人模式下送給伺服器
+const _origDoSubmit = doSubmit
+window.doSubmit = function(qty) {
+  if (!multiMode) { _origDoSubmit(qty); return }
+  qty = Math.max(0, Math.round(qty))
+  clearInterval(timerID)
+  document.getElementById('hud-timer').classList.remove('blink')
+  document.getElementById('g-az').style.display = 'none'
+  document.getElementById('g-wait').style.display = 'block'
+  document.getElementById('g-sub-n').textContent = qty
+  socket.emit('submit_order', { quantity: qty }, (res) => {
+    if (res.error) {
+      document.getElementById('g-wait').style.display = 'none'
+      document.getElementById('g-az').style.display = 'block'
+      showRoomErr('提交失敗：' + res.error)
+    }
+  })
+}
+
+// 初始化大廳啤酒杯
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => drawMug('lobby-mug'), 100)
+})
+
+</script>
 <!--
   字型說明：
   - Cubic 11：開源像素中文字體（支援繁體中文）
@@ -150,12 +438,141 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
   font-family:'Press Start 2P',monospace !important;
 }
 .glow{letter-spacing:.06em;}
+
+/* 房間制 UI */
+.room-code {
+  font-family:'Press Start 2P',monospace;
+  font-size:28px;
+  color:var(--gold);
+  letter-spacing:.2em;
+  text-align:center;
+  padding:12px;
+  background:#000;
+  border:2px solid var(--gold);
+  box-shadow:0 0 20px rgba(251,191,36,.3);
+}
+.player-slot {
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;
+  border:2px solid var(--b1);
+  margin-bottom:6px;
+  background:var(--panel);
+}
+.player-slot.filled { border-color:var(--grn); }
+.player-slot.mine   { border-color:var(--gold); background:#0d0900; }
+.role-btn {
+  font-family:inherit;font-size:13px;
+  padding:10px 8px;border:2px solid;
+  background:var(--panel);cursor:pointer;
+  flex:1;text-align:center;
+  transition:all .1s;
+}
+.role-btn:hover   { filter:brightness(1.3); }
+.role-btn.taken   { opacity:.35;cursor:not-allowed;border-style:dashed; }
+.role-btn.mine    { box-shadow:0 0 12px currentColor; }
+.role-btn:active  { transform:scale(.97); }
 </style>
 </head>
 <body>
 
+
+<!-- ════ 大廳：建立/加入房間 ════ -->
+<div id="s-lobby" class="screen on">
+<div style="padding:14px 12px">
+
+  <div class="pbox" style="padding:20px;text-align:center;margin-bottom:14px">
+    <canvas id="lobby-mug" width="96" height="72" style="width:96px;height:72px;display:block;margin:0 auto 14px"></canvas>
+    <div style="font-size:20px;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
+    <div style="font-size:12px;color:var(--c2);margin-top:8px">四人連線多人版</div>
+  </div>
+
+  <!-- 玩家名稱 -->
+  <div class="pbox" style="padding:14px;margin-bottom:14px">
+    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">你的名稱</div>
+    <input type="text" id="lobby-name" class="pinput" placeholder="輸入你的名稱" maxlength="12"
+      style="font-size:16px;padding:10px 14px"/>
+  </div>
+
+  <!-- 建立房間 -->
+  <button class="pbtn pbtn-g" onclick="doCreateRoom()"
+    style="width:100%;font-size:14px;padding:14px;text-align:center;margin-bottom:10px">
+    <span class="emoji">🏠</span> 建立新房間
+  </button>
+
+  <!-- 加入房間 -->
+  <div class="pbox" style="padding:14px;margin-bottom:10px">
+    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">加入現有房間</div>
+    <div style="display:flex;gap:8px">
+      <input type="text" id="lobby-code" class="pinput"
+        placeholder="房間代碼" maxlength="6"
+        style="font-size:16px;padding:10px;text-transform:uppercase;letter-spacing:.15em;flex:1"/>
+      <button class="pbtn pbtn-b" onclick="doJoinRoom()"
+        style="font-size:14px;padding:10px 16px">加入</button>
+    </div>
+  </div>
+
+  <div id="lobby-err" style="color:var(--red);font-size:12px;text-align:center;min-height:20px;padding:4px"></div>
+
+  <div class="pdiv"></div>
+  <button class="pbtn pbtn-y" onclick="goSinglePlayer()"
+    style="width:100%;font-size:13px;padding:10px;text-align:center">
+    單人模式（AI 對手）
+  </button>
+
+</div>
+</div>
+
+<!-- ════ 房間等待室 ════ -->
+<div id="s-room" class="screen">
+<div style="padding:14px 12px">
+
+  <div class="pbox" style="padding:14px;text-align:center;margin-bottom:14px">
+    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">房間代碼（分享給朋友）</div>
+    <div class="room-code" id="room-code-display">------</div>
+    <button class="pbtn pbtn-b" onclick="copyRoomCode()"
+      style="margin-top:10px;font-size:12px;padding:6px 14px">
+      <span class="emoji">📋</span> 複製代碼
+    </button>
+  </div>
+
+  <!-- 角色選擇 -->
+  <div class="pbox" style="padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;color:var(--c2);margin-bottom:10px">
+      <span class="emoji">🎭</span> 選擇角色（每人不同）
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="role-btns">
+      <!-- JS 生成 -->
+    </div>
+  </div>
+
+  <!-- 玩家列表 -->
+  <div class="pbox" style="padding:14px;margin-bottom:14px">
+    <div style="font-size:13px;color:var(--c2);margin-bottom:10px">
+      <span class="emoji">👥</span> 房間玩家 <span id="player-count" style="color:var(--grn)">0</span>/4
+    </div>
+    <div id="player-list"></div>
+  </div>
+
+  <div id="room-err" style="color:var(--red);font-size:12px;text-align:center;min-height:20px;padding:4px"></div>
+
+  <!-- 開始按鈕（房主才顯示） -->
+  <button id="start-btn" class="pbtn pbtn-g" onclick="doStartGame()"
+    style="display:none;width:100%;font-size:15px;padding:14px;text-align:center;margin-bottom:10px">
+    ▶ 開始遊戲！
+  </button>
+
+  <div id="start-hint" style="font-size:12px;color:var(--c2);text-align:center;margin-bottom:10px"></div>
+
+  <button class="pbtn pbtn-r" onclick="leaveRoom()"
+    style="width:100%;font-size:13px;padding:10px;text-align:center">
+    ← 離開房間
+  </button>
+
+</div>
+</div>
+
 <!-- ════ 首頁 ════ -->
-<div id="s-home" class="screen on">
+<div id="s-home" class="screen">
 <div style="padding:14px 12px">
 
   <div class="pbox" style="padding:20px;text-align:center;margin-bottom:14px">
