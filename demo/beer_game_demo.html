@@ -394,7 +394,9 @@ function goSinglePlayer() {
 const _origDoSubmit = doSubmit
 window.doSubmit = function(qty) {
   if (!multiMode) { _origDoSubmit(qty); return }
-  qty = Math.max(0, Math.round(qty))
+  const curCash = GS.roles[ROLE].cash
+  const maxOrd = Math.max(0, Math.floor(curCash / BUY_PRICE[ROLE]))
+  qty = Math.min(Math.max(0, Math.round(qty)), maxOrd)
   clearInterval(timerID)
   document.getElementById('hud-timer').classList.remove('blink')
   document.getElementById('g-az').style.display = 'none'
@@ -939,6 +941,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <div style="font-size:12px;color:var(--grn);margin-bottom:4px">[ 本週決策 ]</div>
       <div id="g-azq" style="font-size:15px;color:var(--c0);margin-bottom:6px">你要訂多少箱？</div>
       <div id="g-decision-ctx" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.9;min-height:3em"></div>
+      <div id="g-budget-hint" style="font-size:11px;color:var(--c2);margin-bottom:6px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <input type="number" min="0" id="g-input" class="pinput" placeholder="輸入數量" style="flex:1"/>
         <button class="pbtn pbtn-g" onclick="submitOrder()" style="font-size:15px;padding:10px 16px">確認</button>
@@ -1161,6 +1164,8 @@ const ROLES=['retailer','wholesaler','distributor','manufacturer']
 
 // 各角色定價與成本（越接近消費者售價越高，但缺貨罰款也越重）
 const SELL_PRICE={retailer:30,wholesaler:20,distributor:14,manufacturer:10}
+// 向上游進貨單價（零售商向批發商買、批發商向分銷商買…）
+const BUY_PRICE={retailer:20,wholesaler:14,distributor:10,manufacturer:5}
 
 // 庫存費（/箱/週）：越上游庫存越貴（倉儲/原料積壓成本高）
 const HOLD_COST={
@@ -1470,6 +1475,16 @@ function refreshUI(){
   document.getElementById('g-wait').style.display='none'
   document.getElementById('g-input').value=''
   document.getElementById('g-input').focus()
+  // 更新可訂購上限
+  const curCash = GS.roles[ROLE].cash
+  const maxOrd = Math.max(0, Math.floor(curCash / BUY_PRICE[ROLE]))
+  const inp = document.getElementById('g-input')
+  inp.max = maxOrd
+  const budgetHint = document.getElementById('g-budget-hint')
+  if (budgetHint) {
+    budgetHint.textContent = `可用資金 $${curCash.toFixed(0)}，最多訂 ${maxOrd} 箱（進價 $${BUY_PRICE[ROLE]}/箱）`
+    budgetHint.style.color = curCash <= 0 ? 'var(--red)' : 'var(--c2)'
+  }
 }
 
 function renderChart(id,data,color){
@@ -1489,7 +1504,19 @@ function renderChart(id,data,color){
   }
 }
 
-function submitOrder(){const v=parseInt(document.getElementById('g-input').value);if(isNaN(v)||v<0)return;doSubmit(v)}
+function submitOrder(){
+  const v=parseInt(document.getElementById('g-input').value)
+  if(isNaN(v)||v<0)return
+  const curCash=GS.roles[ROLE].cash
+  const maxOrd=Math.max(0,Math.floor(curCash/BUY_PRICE[ROLE]))
+  if(v>maxOrd){
+    const hint=document.getElementById('g-budget-hint')
+    if(hint){hint.textContent=`⚠️ 資金不足！最多只能訂 ${maxOrd} 箱`;hint.style.color='var(--red)'}
+    document.getElementById('g-input').value=maxOrd
+    return
+  }
+  doSubmit(v)
+}
 function doSubmit(qty){
   qty=Math.max(0,Math.round(qty))
   clearInterval(timerID)
