@@ -717,9 +717,13 @@ function processWeek(state,orders){
 }
 
 function auto(role,state){
-  const rs=state.roles[role],it=rs.pipeline[0]+rs.pipeline[1]
-  const targetInv=Math.round((state.curve[state.week-1]||4)*1.2)
-  return Math.max(0,targetInv-rs.inventory-it+Math.round(rs.backlog*0.5))
+  // AI 也只用自己看到的歷史需求，不偷看真實需求曲線
+  const rs=state.roles[role]
+  const it=rs.pipeline[0]+rs.pipeline[1]
+  const recent=rs.history.slice(-3).map(h=>h.dem)
+  const avg=recent.length>0 ? recent.reduce((a,b)=>a+b,0)/recent.length : 4
+  const target=Math.round(avg*1.5)
+  return Math.max(0,target-rs.inventory-it+rs.backlog)
 }
 
 // ═══════════════════════════════════════
@@ -857,7 +861,15 @@ function refreshUI(){
 
   // 決策脈絡
   const inv=rs.inventory,pipe=rs.pipeline[0]+rs.pipeline[1],back=rs.backlog
-  const sug=Math.max(0,Math.round((GS.curve[wk-1]||4)*1.2-inv-pipe+back*0.5))
+  // 建議訂購量：只用「自己看到的下游需求」計算，不偷看真實消費者需求
+    // 使用最近 1-3 週收到的下游訂單平均，× 1.2 安全係數
+    const myHistory = GS.roles[ROLE].history
+    const recentDemands = myHistory.slice(-3).map(h => h.dem)  // 最多取近3週
+    const avgDemand = recentDemands.length > 0
+      ? recentDemands.reduce((a,b)=>a+b,0) / recentDemands.length
+      : 4  // 第一週沒歷史，預設 4
+    const targetInv = Math.round(avgDemand * 1.5)  // 目標庫存 = 平均需求 × 1.5
+    const sug = Math.max(0, Math.round(targetInv - inv - pipe + back))
   const ctx=back>0?`積壓 ${back} 箱（在賠錢！），庫存 ${inv} 箱，在途 ${pipe} 箱。`
              :inv<3?`⚠️ 庫存只剩 ${inv} 箱，快補貨！在途 ${pipe} 箱。`
              :`庫存 ${inv} 箱，在途 ${pipe} 箱，系統建議補 ${sug} 箱。`
