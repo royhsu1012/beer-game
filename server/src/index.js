@@ -54,6 +54,7 @@ function getLastOrder(room, role) {
 }
 
 function resolveWeek(roomCode) {
+  try {
   const room = getRoom(roomCode)
   if (!room || room.status !== 'playing') return
 
@@ -110,6 +111,10 @@ function resolveWeek(roomCode) {
   })
 
   startRoundTimer(roomCode)
+  } catch(e) {
+    log('resolveWeek_error', { room: roomCode, error: e.message })
+    io.to(roomCode).emit('server_error', { message: 'resolveWeek: ' + e.message })
+  }
 }
 
 function startRoundTimer(roomCode) {
