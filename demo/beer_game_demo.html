@@ -80,7 +80,7 @@ function initSocket() {
   // 遊戲開始
   socket.on('game_started', ({ role, week, timeLimit, inventory, backlog, pipeline0, pipeline1 }) => {
     try {
-      sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role }))
+      try { sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role })) } catch(_) {}
       ROLE = role
       multiMode = true
       const dem = genDemand()
