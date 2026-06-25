@@ -404,27 +404,6 @@ function goSinglePlayer() {
   initHome()
 }
 
-// 覆寫 doSubmit 與初始化大廳啤酒杯（等兩個 script block 都載入後再執行）
-document.addEventListener('DOMContentLoaded', () => {
-  const _origDoSubmit = doSubmit
-  window.doSubmit = function(qty) {
-    if (!multiMode) { _origDoSubmit(qty); return }
-    qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
-    clearInterval(timerID)
-    document.getElementById('hud-timer').classList.remove('blink')
-    document.getElementById('g-az').style.display = 'none'
-    document.getElementById('g-wait').style.display = 'block'
-    document.getElementById('g-sub-n').textContent = qty
-    socket.emit('submit_order', { quantity: qty }, (res) => {
-      if (res.error) {
-        document.getElementById('g-wait').style.display = 'none'
-        document.getElementById('g-az').style.display = 'block'
-        showRoomErr('提交失敗：' + res.error)
-      }
-    })
-  }
-  setTimeout(() => drawMug('lobby-mug'), 100)
-})
 
 </script>
 <!--
@@ -1701,6 +1680,29 @@ document.addEventListener('DOMContentLoaded',()=>{
     remainEl.style.color=estimated>=START_CAPITAL?'var(--grn)':'var(--red)'
   })
 })
+</script>
+<script>
+// 此 script 放最後，確保兩個主 script block 都已載入
+// doSubmit 多人覆寫
+const _origDoSubmit = doSubmit
+window.doSubmit = function(qty) {
+  if (!multiMode) { _origDoSubmit(qty); return }
+  qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
+  clearInterval(timerID)
+  document.getElementById('hud-timer').classList.remove('blink')
+  document.getElementById('g-az').style.display = 'none'
+  document.getElementById('g-wait').style.display = 'block'
+  document.getElementById('g-sub-n').textContent = qty
+  socket.emit('submit_order', { quantity: qty }, (res) => {
+    if (res.error) {
+      document.getElementById('g-wait').style.display = 'none'
+      document.getElementById('g-az').style.display = 'block'
+      showRoomErr('提交失敗：' + res.error)
+    }
+  })
+}
+// 大廳啤酒杯
+drawMug('lobby-mug')
 </script>
 </body>
 </html>
