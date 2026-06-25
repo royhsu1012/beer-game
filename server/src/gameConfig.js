@@ -43,7 +43,7 @@ function generateDemandCurve(seed) {
   const period2  = rng.range(3,   7)     // 次諧波週期
   const phase2   = rng.range(0, 6.28)    // 次諧波相位
   const trend    = rng.range(-0.1, 0.15) // 長期趨勢（負=下降 正=上升）
-  const noiseAmp = rng.range(0.3,  1.1)  // 白噪音強度
+  const noiseAmp = rng.range(1.0,  2.0)  // 白噪音強度
 
   // 突發衝擊事件（至少 1 次，最多 3 次）
   const shockCount = rng.int(1, 3)
