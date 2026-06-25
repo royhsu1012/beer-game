@@ -109,7 +109,7 @@ function initSocket() {
     try {
       GS.roles[ROLE].inventory = mine.inv
       GS.roles[ROLE].backlog   = mine.bl
-      GS.roles[ROLE].pipeline  = [0, 0]
+      // pipeline will be updated by the upcoming week_started event
       const revenue    = mine.sold * SELL_PRICE[ROLE]
       const procurement = mine.ord * BUY_PRICE[ROLE]
       const weekProfit = revenue - mine.hc - mine.sc - procurement
@@ -1681,13 +1681,13 @@ document.addEventListener('DOMContentLoaded',()=>{
       remainEl.textContent='$—'; remainEl.style.color='var(--c2)'
       return
     }
-    const sell=SELL_PRICE[ROLE]
-    const orderAmt=qty*sell
-    const estimated=GS.roles[ROLE].cash+orderAmt
-    totalEl.textContent=qty+'箱 × $'+sell.toFixed(2)+' = $'+orderAmt.toFixed(2)
+    const buy=BUY_PRICE[ROLE]
+    const orderAmt=qty*buy
+    const estimated=GS.roles[ROLE].cash-orderAmt
+    totalEl.textContent=qty+'箱 × $'+buy.toFixed(2)+' = -$'+orderAmt.toFixed(2)
     totalEl.style.color='var(--yel)'
     remainEl.textContent='$'+estimated.toFixed(0)
-    remainEl.style.color=estimated>=START_CAPITAL?'var(--grn)':'var(--red)'
+    remainEl.style.color=estimated>=0?'var(--grn)':'var(--red)'
   })
 })
 </script>
