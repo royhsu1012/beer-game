@@ -1072,13 +1072,9 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div id="db-lesson" style="font-size:13px;line-height:2"></div>
   </div>
 
-  <button class="pbtn pbtn-y" onclick="restart()"
-    style="width:100%;font-size:15px;padding:14px;text-align:center;margin-bottom:10px">
-    <span class="emoji">🔄</span> 再玩一局（新需求）
-  </button>
-  <button class="pbtn pbtn-b" onclick="goHome()"
-    style="width:100%;font-size:14px;padding:10px;text-align:center">
-    ← 回首頁
+  <button class="pbtn pbtn-b" onclick="restart()"
+    style="width:100%;font-size:15px;padding:14px;text-align:center">
+    ← 回到首頁
   </button>
 </div>
 </div>
@@ -1675,7 +1671,15 @@ function showDebrief(){
   localStorage.setItem('bgh6',JSON.stringify(HI))
 }
 
-function restart(){clearInterval(timerID);sessionStorage.removeItem('bgg');GS=null;ROLE=null;SNAP=null;hCash=[];hInv=[];hOrd=[];initHome();show('home')}
+function restart(){
+  clearInterval(timerID)
+  try { sessionStorage.removeItem('bgg') } catch(_) {}
+  if (socket) { socket.disconnect(); socket = null }
+  GS=null;ROLE=null;SNAP=null;hCash=[];hInv=[];hOrd=[]
+  myRoomCode=null;isHost=false;myRole=null;multiMode=false
+  show('lobby')
+  drawMug('lobby-mug')
+}
 
 document.addEventListener('DOMContentLoaded',()=>{
   initHome()
