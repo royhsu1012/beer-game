@@ -11,16 +11,9 @@
   - 俐方體11號：台灣商業字型，無免費 CDN，使用 Cubic 11 替代
 -->
 <style>
-/* Press Start 2P — Google Fonts 像素字型（英數） */
-/* DotGothic16 — 點陣風格中文字型 */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=DotGothic16&display=swap');
-
-/* Cubic 11 — 中文像素字型備用 */
-@font-face {
-  font-family: 'Cubic11';
-  src: url('https://cdn.jsdelivr.net/gh/ACh-K/Cubic-11@main/Cubic_11_1.013_R.woff2') format('woff2');
-  font-display: swap;
-}
+/* Cubic 11 — 開源中文像素字型 */
+/* DotGothic16：中文 | Press Start 2P：英數 */
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Press+Start+2P&display=swap');
 
 /* Google Noto Color Emoji — 讓 emoji 全部顯示為彩色 */
 @font-face {
@@ -43,7 +36,7 @@ body{
   background:var(--ink);
   color:var(--c0);
   /* 字型堆疊：像素中文 → 系統中文 → emoji */
-  font-family:'Cubic11','DFKai-SB','Microsoft JhengHei',sans-serif;
+  font-family:'DotGothic16','Microsoft JhengHei',sans-serif;
   font-size:14px;
   line-height:1.5;
   min-height:100vh;
@@ -81,7 +74,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
   box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 16px rgba(248,113,113,.2)}
 
 /* 按鈕 */
-.pbtn{font-family:inherit;font-size:14px;padding:8px 14px;border:2px solid;
+.pbtn{font-family:'DotGothic16','Microsoft JhengHei',sans-serif;font-size:14px;padding:8px 14px;border:2px solid;
   background:var(--panel);cursor:pointer;box-shadow:3px 3px 0 #000;
   display:inline-block;transition:filter .05s}
 .pbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
@@ -92,7 +85,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 .pbtn-r{color:var(--red);border-color:var(--red)}
 
 /* 輸入 */
-.pinput{font-family:inherit;font-size:20px;background:#000;color:var(--grn);
+.pinput{font-family:'DotGothic16','Microsoft JhengHei',sans-serif;font-size:20px;background:#000;color:var(--grn);
   border:2px solid var(--grn);padding:10px 14px;width:100%;outline:none;
   text-align:center;box-shadow:inset 2px 2px 0 #001500,3px 3px 0 #000;caret-color:var(--grn)}
 .pinput:focus{border-color:var(--blue)}
@@ -147,6 +140,16 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 .role-wholesaler {color:var(--grn)}
 .role-distributor{color:var(--yel)}
 .role-manufacturer{color:var(--red)}
+
+/* === 數字與英數用 Press Start 2P === */
+#hud-timer,#hud-cash,
+#g-inv,#g-recv,#g-sold,#g-dem,#g-back,#g-pipe,
+#g-cash-big,#g-week-profit,#g-revenue,#g-hc,#g-sc,#g-wc,
+#db-cash,#db-change,#cn-cash,#cn-inv,#cn-ord,
+.tile-val,.glow{
+  font-family:'Press Start 2P',monospace !important;
+}
+.glow{letter-spacing:.06em;}
 </style>
 </head>
 <body>
