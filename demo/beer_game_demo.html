@@ -113,7 +113,7 @@ function initSocket() {
     const sc   = mine.bl   * SHORT_COST[ROLE]
     const revenue = mine.sold * sell
     const weekProfit = revenue - hc - sc
-    GS.roles[ROLE].cash   = (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit
+    GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
     GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
     GS.week = week + 1
     // 建立 snap
@@ -1254,7 +1254,7 @@ function processWeek(state,orders){
     const sc=bl[r]*SHORT_COST[r]
     const weekProfit=revenue-hc-sc
     const newProfit=state.roles[r].profit+weekProfit
-    const newCash=START_CAPITAL+newProfit
+    const newCash=Math.max(-1000, START_CAPITAL+newProfit)
     snap[r]={wk,recv:recv[r],dem:inc[r],sold:sh[r],inv:ia[r],bl:bl[r],ord:orders[r],
              revenue,hc,sc,weekProfit,profit:newProfit,cash:newCash}
     nr[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],
