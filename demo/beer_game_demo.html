@@ -387,7 +387,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div id="g-az" class="az slidein" style="margin-bottom:10px">
       <div style="font-size:12px;color:var(--grn);margin-bottom:4px">[ 本週決策 ]</div>
       <div id="g-azq" style="font-size:15px;color:var(--c0);margin-bottom:6px">你要訂多少箱？</div>
-      <div id="g-decision-ctx" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.7;min-height:2em"></div>
+      <div id="g-decision-ctx" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.9;min-height:3em"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <input type="number" min="0" id="g-input" class="pinput" placeholder="輸入數量" style="flex:1"/>
         <button class="pbtn pbtn-g" onclick="submitOrder()" style="font-size:15px;padding:10px 16px">確認</button>
@@ -870,10 +870,21 @@ function refreshUI(){
       : 4  // 第一週沒歷史，預設 4
     const targetInv = Math.round(avgDemand * 1.5)  // 目標庫存 = 平均需求 × 1.5
     const sug = Math.max(0, Math.round(targetInv - inv - pipe + back))
-  const ctx=back>0?`積壓 ${back} 箱（在賠錢！），庫存 ${inv} 箱，在途 ${pipe} 箱。`
-             :inv<3?`⚠️ 庫存只剩 ${inv} 箱，快補貨！在途 ${pipe} 箱。`
-             :`庫存 ${inv} 箱，在途 ${pipe} 箱，系統建議補 ${sug} 箱。`
-  document.getElementById('g-decision-ctx').textContent=ctx
+  // 建議量公式說明：目標庫存 - 現有庫存 - 在途 + 積壓
+  const formula = `目標庫存(${targetInv}) − 庫存(${inv}) − 在途(${pipe}) + 積壓(${back}) = ${sug} 箱`
+  let ctx, formulaHtml
+  if(back>0){
+    ctx=`⚠️ 積壓 ${back} 箱還沒出貨，正在虧損！庫存 ${inv} 箱，在途 ${pipe} 箱。`
+  } else if(inv<3){
+    ctx=`⚠️ 庫存只剩 ${inv} 箱，有缺貨風險！在途 ${pipe} 箱。`
+  } else {
+    ctx=`庫存 ${inv} 箱，在途 ${pipe} 箱。`
+  }
+  document.getElementById('g-decision-ctx').innerHTML =
+    `<span>${ctx}</span><br>` +
+    `<span style="color:var(--grn)">建議補 <b>${sug} 箱</b></span>` +
+    `<span style="color:var(--b3);font-size:11px;margin-left:6px">` +
+    `（目標庫存${targetInv} − 現有${inv} − 在途${pipe} + 積壓${back}）</span>`
 
   // 快速選鈕
   const qEl=document.getElementById('g-quick');qEl.innerHTML=''
