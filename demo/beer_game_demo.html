@@ -11,12 +11,14 @@
   - 俐方體11號：台灣商業字型，無免費 CDN，使用 Cubic 11 替代
 -->
 <style>
-/* Zpix 精品點陣體 — 專為像素風格遊戲設計，支援繁體中文 */
+/* Cubic 11 — 開源中文像素字型 */
 @font-face {
-  font-family: 'Zpix';
-  src: url('https://cdn.jsdelivr.net/gh/SolidZORO/zpix-pixel-font@master/dist/zpix.woff2') format('woff2');
+  font-family: 'Cubic11';
+  src: url('https://cdn.jsdelivr.net/gh/ACh-K/Cubic-11@main/Cubic_11_1.013_R.woff2') format('woff2');
   font-display: swap;
 }
+/* DotGothic16 — Google Fonts 點陣風格字型（備用） */
+@import url('https://fonts.googleapis.com/css2?family=DotGothic16&family=Noto+Sans+TC:wght@400;700;900&display=swap');
 
 /* Google Noto Color Emoji — 讓 emoji 全部顯示為彩色 */
 @font-face {
@@ -39,7 +41,7 @@ body{
   background:var(--ink);
   color:var(--c0);
   /* 字型堆疊：像素中文 → 系統中文 → emoji */
-  font-family:'Zpix','DFKai-SB','Microsoft JhengHei',sans-serif;
+  font-family:'Cubic11','DFKai-SB','Microsoft JhengHei',sans-serif;
   font-size:14px;
   line-height:1.5;
   min-height:100vh;
