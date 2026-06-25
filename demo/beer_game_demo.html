@@ -831,9 +831,18 @@ function initSocket() {
       refreshUI()
       startTimer()
     } catch(e) {
-      document.getElementById('g-wait').innerHTML =
-        `<div class="pbox" style="padding:12px;color:var(--red)">week_started 錯誤: ${e.message}</div>`
+      submitting = false
+      document.getElementById('g-wait').style.display = 'none'
+      document.getElementById('g-az').style.display = 'block'
+      showGameNotice('⚠️ week_started 錯誤: ' + e.message)
     }
+  })
+
+  socket.on('server_error', ({ message }) => {
+    submitting = false
+    document.getElementById('g-wait').style.display = 'none'
+    document.getElementById('g-az').style.display = 'block'
+    showGameNotice('⚠️ 伺服器錯誤: ' + message)
   })
 
   // 遊戲結束
