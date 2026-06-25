@@ -404,27 +404,25 @@ function goSinglePlayer() {
   initHome()
 }
 
-// 覆寫 doSubmit：多人模式下送給伺服器
-const _origDoSubmit = doSubmit
-window.doSubmit = function(qty) {
-  if (!multiMode) { _origDoSubmit(qty); return }
-  qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
-  clearInterval(timerID)
-  document.getElementById('hud-timer').classList.remove('blink')
-  document.getElementById('g-az').style.display = 'none'
-  document.getElementById('g-wait').style.display = 'block'
-  document.getElementById('g-sub-n').textContent = qty
-  socket.emit('submit_order', { quantity: qty }, (res) => {
-    if (res.error) {
-      document.getElementById('g-wait').style.display = 'none'
-      document.getElementById('g-az').style.display = 'block'
-      showRoomErr('提交失敗：' + res.error)
-    }
-  })
-}
-
-// 初始化大廳啤酒杯
+// 覆寫 doSubmit 與初始化大廳啤酒杯（等兩個 script block 都載入後再執行）
 document.addEventListener('DOMContentLoaded', () => {
+  const _origDoSubmit = doSubmit
+  window.doSubmit = function(qty) {
+    if (!multiMode) { _origDoSubmit(qty); return }
+    qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
+    clearInterval(timerID)
+    document.getElementById('hud-timer').classList.remove('blink')
+    document.getElementById('g-az').style.display = 'none'
+    document.getElementById('g-wait').style.display = 'block'
+    document.getElementById('g-sub-n').textContent = qty
+    socket.emit('submit_order', { quantity: qty }, (res) => {
+      if (res.error) {
+        document.getElementById('g-wait').style.display = 'none'
+        document.getElementById('g-az').style.display = 'block'
+        showRoomErr('提交失敗：' + res.error)
+      }
+    })
+  }
   setTimeout(() => drawMug('lobby-mug'), 100)
 })
 
