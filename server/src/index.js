@@ -1,7 +1,7 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { createRoom, getRoom, addPlayer, removePlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom } = require('./RoomManager')
+const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom } = require('./RoomManager')
 const { processWeek, calculateResults } = require('./GameEngine')
 const { ROUND_TIME_SECONDS, ROLES } = require('./gameConfig')
 
@@ -195,14 +195,48 @@ io.on('connection', (socket) => {
     }
   })
 
+  socket.on('reconnect_game', ({ roomCode, name, role }, cb) => {
+    const code = roomCode.toUpperCase()
+    const result = reconnectPlayer(code, name, role, socket.id)
+    if (result.error) return cb({ error: result.error })
+
+    const { room, player } = result
+    if (player.reconnectTimer) { clearTimeout(player.reconnectTimer); player.reconnectTimer = null }
+    socket.join(code)
+
+    const roleState = room.gameState.roles[role]
+    cb({ ok: true })
+    socket.emit('game_resumed', {
+      role,
+      week: room.gameState.week,
+      timeLimit: ROUND_TIME_SECONDS,
+      inventory: roleState.inventory,
+      backlog: roleState.backlog,
+      pipeline0: roleState.pipeline[0],
+      pipeline1: roleState.pipeline[1],
+      history: room.gameState.roles[role].weeklyHistory
+    })
+    io.to(code).emit('player_reconnected', { name })
+  })
+
   socket.on('disconnect', () => {
     const found = findPlayerRoom(socket.id)
     if (!found) return
     const { code, room } = found
-    removePlayer(code, socket.id)
+    const result = removePlayer(code, socket.id)
     if (room && room.status === 'waiting') broadcastRoom(code)
-    if (room && room.status === 'playing') {
-      io.to(code).emit('player_disconnected', { message: '有玩家断线，等待重连...' })
+    if (room && room.status === 'playing' && result?.disconnected) {
+      const player = result.disconnected
+      io.to(code).emit('player_disconnected', { name: player.name, role: player.role })
+      // 60s 後自動轉 bot
+      player.reconnectTimer = setTimeout(() => {
+        if (player.disconnected) {
+          player.isBot = true
+          player.disconnected = false
+          player.name = '電腦'
+          io.to(code).emit('player_reconnected', { name: player.name, timedOut: true })
+        }
+      }, 60 * 1000)
     }
   })
 })

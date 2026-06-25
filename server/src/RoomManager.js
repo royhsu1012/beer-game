@@ -30,8 +30,28 @@ function addPlayer(code, socketId, name) {
 function removePlayer(code, socketId) {
   const room = getRoom(code)
   if (!room) return
+  // During a game: mark disconnected instead of removing
+  if (room.status === 'playing') {
+    const player = room.players.find(p => p.socketId === socketId && !p.isBot)
+    if (player) {
+      player.disconnected = true
+      player.socketId = null
+      return { disconnected: player }
+    }
+  }
   room.players = room.players.filter(p => p.socketId !== socketId)
   if (room.players.length === 0) rooms.delete(code)
+  return { removed: true }
+}
+
+function reconnectPlayer(code, name, role, newSocketId) {
+  const room = getRoom(code)
+  if (!room || room.status !== 'playing') return { error: 'GAME_NOT_ACTIVE' }
+  const player = room.players.find(p => p.name === name && p.role === role && p.disconnected)
+  if (!player) return { error: 'PLAYER_NOT_FOUND' }
+  player.socketId = newSocketId
+  player.disconnected = false
+  return { ok: true, room, player }
 }
 
 function selectRole(code, socketId, role) {
@@ -100,4 +120,4 @@ function findPlayerRoom(socketId) {
   return null
 }
 
-module.exports = { createRoom, getRoom, addPlayer, removePlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom }
+module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom }
