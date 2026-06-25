@@ -177,16 +177,26 @@ function showRoomErr(msg) {
   setTimeout(() => document.getElementById('room-err').textContent = '', 3000)
 }
 
+async function wakeServer() {
+  try { await fetch(SERVER_URL + '/health') } catch(e) {}
+}
+
 function doCreateRoom() {
   const name = document.getElementById('lobby-name').value.trim()
   if (!name) { showLobbyErr('請先輸入名稱'); return }
   myName = name
-  initSocket()
-  socket.emit('create_room', { name }, (res) => {
-    if (res.error) { showLobbyErr('建立失敗：' + res.error); return }
-    myRoomCode = res.roomCode
-    isHost = true
-    enterRoom()
+  showLobbyErr('連線中，請稍候...')
+  wakeServer().then(() => {
+    initSocket()
+    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
+    socket.emit('create_room', { name }, (res) => {
+      clearTimeout(done)
+      if (res.error) { showLobbyErr('建立失敗：' + res.error); return }
+      myRoomCode = res.roomCode
+      isHost = true
+      showLobbyErr('')
+      enterRoom()
+    })
   })
 }
 
@@ -196,15 +206,21 @@ function doJoinRoom() {
   if (!name) { showLobbyErr('請先輸入名稱'); return }
   if (code.length !== 6) { showLobbyErr('房間代碼為 6 位數'); return }
   myName = name
-  initSocket()
-  socket.emit('join_room', { roomCode: code, name }, (res) => {
-    if (res.error) {
-      const msgs = { ROOM_NOT_FOUND:'找不到房間', GAME_ALREADY_STARTED:'遊戲已開始', ROOM_FULL:'房間已滿' }
-      showLobbyErr(msgs[res.error] || res.error); return
-    }
-    myRoomCode = code
-    isHost = false
-    enterRoom()
+  showLobbyErr('連線中，請稍候...')
+  wakeServer().then(() => {
+    initSocket()
+    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
+    socket.emit('join_room', { roomCode: code, name }, (res) => {
+      clearTimeout(done)
+      if (res.error) {
+        const msgs = { ROOM_NOT_FOUND:'找不到房間（代碼錯誤或已過期）', GAME_ALREADY_STARTED:'遊戲已開始', ROOM_FULL:'房間已滿' }
+        showLobbyErr(msgs[res.error] || res.error); return
+      }
+      myRoomCode = code
+      isHost = false
+      showLobbyErr('')
+      enterRoom()
+    })
   })
 }
 
