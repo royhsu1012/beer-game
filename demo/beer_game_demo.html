@@ -393,6 +393,20 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
         <button class="pbtn pbtn-g" onclick="submitOrder()" style="font-size:15px;padding:10px 16px">確認</button>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap" id="g-quick"></div>
+
+      <!-- 預計下單金額 -->
+      <div id="g-order-preview" style="display:none;margin-top:10px;padding:10px 12px;background:var(--ink);border:1px solid var(--grn);font-size:12px;line-height:2.2">
+        <div style="color:var(--c2);margin-bottom:4px">📋 下單預覽</div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--c2)">訂購數量</span>
+          <span id="g-prev-qty" style="color:var(--c0);font-family:'Press Start 2P',monospace">0 箱</span>
+        </div>
+        <div style="display:flex;justify-content:space-between">
+          <span style="color:var(--c2)">預計下單總金額</span>
+          <span id="g-prev-total" style="color:var(--grn);font-family:'Press Start 2P',monospace">$0</span>
+        </div>
+        <div style="font-size:11px;color:var(--c2);margin-top:2px">（訂購數量 × 賣價 $<span id="g-prev-price"></span>/箱）</div>
+      </div>
     </div>
 
     <div id="g-wait" style="display:none;margin-bottom:10px">
