@@ -1382,7 +1382,7 @@ function startTimer(){
   timerID=setInterval(()=>{
     tLeft--;el.textContent=tLeft
     el.style.color=tLeft<=10?'var(--red)':tLeft<=20?'var(--yel)':'var(--gold)'
-    if(tLeft<=0){clearInterval(timerID);const h=GS.roles[ROLE].history;doSubmit(h.length?h[h.length-1].ord:4)}
+    if(tLeft<=0){clearInterval(timerID);doSubmit(0)}
   },1000)
 }
 
