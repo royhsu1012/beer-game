@@ -98,6 +98,16 @@ function removeBot(code, role) {
   return { ok: true, room }
 }
 
+function deselectRole(code, socketId) {
+  const room = getRoom(code)
+  if (!room) return { error: 'ROOM_NOT_FOUND' }
+  if (room.status !== 'waiting') return { error: 'GAME_ALREADY_STARTED' }
+  const player = room.players.find(p => p.socketId === socketId)
+  if (!player) return { error: 'PLAYER_NOT_FOUND' }
+  player.role = null
+  return { ok: true, room }
+}
+
 function startGame(code) {
   const room = getRoom(code)
   if (!room) return { error: 'ROOM_NOT_FOUND' }
@@ -131,4 +141,4 @@ function findPlayerRoom(socketId) {
   return null
 }
 
-module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom }
+module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom }

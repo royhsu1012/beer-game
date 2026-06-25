@@ -5,429 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>🍺 啤酒供應鏈遊戲</title>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script>
-// ═══════════════════════════════════════════════════════════════
-// 多人房間制（Socket.io）
-// ═══════════════════════════════════════════════════════════════
-
-const SERVER_URL = 'https://beer-game-jnsf.onrender.com'
-let socket = null
-let myRoomCode = null
-let myName = null
-let isHost = false
-let myRole = null
-let multiMode = false  // true=多人, false=單人
-
-const ROLE_CFG_MULTI = {
-  retailer:    { label:'🏪 零售商', color:'var(--blue)' },
-  wholesaler:  { label:'📦 批發商', color:'var(--grn)'  },
-  distributor: { label:'🚛 分銷商', color:'var(--yel)'  },
-  manufacturer:{ label:'🏭 製造商', color:'var(--red)'  },
-}
-
-function initSocket() {
-  if (socket) return
-  socket = io(SERVER_URL, { autoConnect: true, reconnectionAttempts: 5 })
-
-  socket.on('connect', () => {
-    console.log('✅ 已連線伺服器')
-    // 嘗試自動重連進行中的遊戲
-    const saved = sessionStorage.getItem('bgg')
-    if (saved) {
-      const { code, name, role } = JSON.parse(saved)
-      socket.emit('reconnect_game', { roomCode: code, name, role }, (res) => {
-        if (res.error) { sessionStorage.removeItem('bgg'); showReconnectOverlay(false) }
-      })
-    }
-  })
-  socket.on('connect_error', () => showLobbyErr('無法連接伺服器，請稍後再試'))
-
-  socket.on('game_resumed', ({ role, week, inventory, backlog, pipeline0, pipeline1, history }) => {
-    ROLE = role
-    GS.roles[ROLE].inventory = inventory
-    GS.roles[ROLE].backlog   = backlog
-    GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
-    GS.roles[ROLE].history   = history || []
-    GS.week = week
-    showReconnectOverlay(false)
-    show('game')
-    refreshUI()
-    startTimer()
-  })
-
-  socket.on('player_disconnected', ({ name, role }) => {
-    if (name === myName) {
-      showReconnectOverlay(true, '網路中斷，重新連線中...')
-    } else {
-      showGameNotice(`⚠️ ${name} 斷線，60秒內未重連將由電腦接管`)
-    }
-  })
-
-  socket.on('player_reconnected', ({ name, timedOut }) => {
-    if (timedOut) {
-      showGameNotice(`🤖 ${name} 已轉為電腦接管`)
-    } else {
-      showGameNotice(`✅ ${name} 已重新連線`)
-    }
-    showReconnectOverlay(false)
-  })
-
-  // 房主重開遊戲室 → 所有人回到等待室
-  socket.on('room_reset', ({ roomCode }) => {
-    GS=null; SNAP=null; hCash=[]; hInv=[]; hOrd=[]
-    multiMode=true
-    myRoomCode=roomCode
-    show('room')
-  })
-
-  // 房主離開複盤頁 → 非房主只能回大廳
-  socket.on('host_left', () => {
-    renderDebriefActions(false)
-  })
-
-  // 房間狀態更新（有人加入/選角色）
-  socket.on('room_updated', ({ players, status }) => {
-    renderRoomPlayers(players, status)
-  })
-
-  // 遊戲開始
-  socket.on('game_started', ({ role, week, timeLimit, inventory, backlog, pipeline0, pipeline1 }) => {
-    try {
-      try { sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role })) } catch(_) {}
-      ROLE = role
-      multiMode = true
-      const dem = genDemand()
-      GS = initState(dem)
-      GS.roles[ROLE].inventory = inventory
-      GS.roles[ROLE].backlog = backlog
-      GS.roles[ROLE].pipeline = [pipeline0, pipeline1]
-      SNAP = null; hCash = []; hInv = []; hOrd = []
-      const cfg = RCFG[ROLE]
-      document.getElementById('hud-role').textContent = cfg.emoji + ' ' + cfg.name
-      document.getElementById('hud-role').style.color = cfg.color
-      document.getElementById('g-azq').textContent = cfg.qlabel
-      document.getElementById('g-dlabel').textContent = cfg.dlabel
-      document.getElementById('g-sell-badge').textContent = '$' + SELL_PRICE[ROLE] + '/箱'
-      setTimeout(() => drawSpr('g-spr', ROLE, 40, 48), 30)
-      show('game')
-      startTimer()
-      refreshUI()
-    } catch(e) {
-      showRoomErr('game_started 錯誤: ' + e.message)
-    }
-  })
-
-  // 週結算：只更新狀態，等 week_started 再刷 UI
-  socket.on('week_results', ({ week, mine, consumerDemand }) => {
-    try {
-      const revenue     = mine.sold * SELL_PRICE[ROLE]
-      const procurement = mine.ord  * BUY_PRICE[ROLE]
-      const weekProfit  = revenue - mine.hc - mine.sc - procurement
-      GS.roles[ROLE].inventory = mine.inv
-      GS.roles[ROLE].backlog   = mine.bl
-      GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
-      GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
-      SNAP = { [ROLE]: {
-        wk: week, recv: mine.recv, dem: mine.dem,
-        sold: mine.sold, inv: mine.inv, bl: mine.bl,
-        ord: mine.ord, revenue, hc: mine.hc, sc: mine.sc, weekProfit,
-        profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
-      }}
-      hCash.push(GS.roles[ROLE].cash)
-      hInv.push(mine.inv)
-      hOrd.push(mine.ord)
-      // DO NOT call refreshUI here — week_started will do it after updating pipeline/week
-    } catch(e) {
-      document.getElementById('g-wait').innerHTML =
-        `<div class="pbox" style="padding:12px;color:var(--red)">week_results 錯誤: ${e.message}</div>`
-    }
-  })
-
-  // 下週開始
-  socket.on('week_started', ({ week, inventory, backlog, pipeline0, pipeline1 }) => {
-    try {
-      GS.roles[ROLE].inventory = inventory
-      GS.roles[ROLE].backlog   = backlog
-      GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
-      GS.week = week
-      document.getElementById('g-wait').style.display = 'none'
-      document.getElementById('g-az').style.display = 'block'
-      refreshUI()
-      startTimer()
-    } catch(e) {
-      document.getElementById('g-wait').innerHTML =
-        `<div class="pbox" style="padding:12px;color:var(--red)">week_started 錯誤: ${e.message}</div>`
-    }
-  })
-
-  // 遊戲結束
-  socket.on('game_finished', ({ results, fullHistory }) => {
-    GS.status = 'done'
-    // 從 fullHistory 重算每個角色的帳戶（含採購成本）
-    for (const role of ROLES) {
-      const hist = fullHistory[role] || []
-      let cash = START_CAPITAL, profit = 0
-      for (const w of hist) {
-        const wp = w.sold * SELL_PRICE[role] - w.hc - w.sc - w.ord * BUY_PRICE[role]
-        profit += wp
-        cash = Math.max(-1000, cash + wp)
-      }
-      GS.roles[role].cash      = cash
-      GS.roles[role].profit    = profit
-      GS.roles[role].history   = hist
-      GS.roles[role].totalSold = hist.reduce((s,w)=>s+w.sold, 0)
-      GS.roles[role].totalHC   = hist.reduce((s,w)=>s+w.hc, 0)
-      GS.roles[role].totalSC   = hist.reduce((s,w)=>s+w.sc, 0)
-    }
-    // 用 server 真實需求曲線更新複盤資訊
-    if (results.demandInfo) {
-      GS.curve    = results.demandInfo.curve
-      GS.mode     = results.demandInfo.mode
-      GS.modeDesc = results.demandInfo.modeDesc || ''
-      GS.base     = results.demandInfo.base
-      GS.peak     = results.demandInfo.peak
-    }
-    showDebrief()
-  })
-
-  // 進度（幾人已提交）
-  socket.on('submission_progress', ({ submittedCount, totalPlayers }) => {
-    const waitEl = document.getElementById('g-wait')
-    if (waitEl.style.display !== 'none') {
-      waitEl.innerHTML = `
-        <div class="pbox" style="padding:16px;text-align:center">
-          <div style="font-size:15px;color:var(--grn)">✅ 已提交</div>
-          <div style="font-size:12px;color:var(--c2);margin-top:6px">等待其他玩家 ${submittedCount}/${totalPlayers}</div>
-        </div>`
-    }
-  })
-}
-
-// 大廳操作
-function showLobbyErr(msg) {
-  document.getElementById('lobby-err').textContent = msg
-  setTimeout(() => document.getElementById('lobby-err').textContent = '', 3000)
-}
-function showRoomErr(msg) {
-  document.getElementById('room-err').textContent = msg
-  setTimeout(() => document.getElementById('room-err').textContent = '', 3000)
-}
-
-async function wakeServer() {
-  try { await fetch(SERVER_URL + '/health') } catch(e) {}
-}
-
-function doCreateRoom() {
-  const name = document.getElementById('lobby-name').value.trim()
-  if (!name) { showLobbyErr('請先輸入名稱'); return }
-  myName = name
-  showLobbyErr('連線中，請稍候...')
-  wakeServer().then(() => {
-    initSocket()
-    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
-    socket.emit('create_room', { name }, (res) => {
-      clearTimeout(done)
-      if (res.error) { showLobbyErr('建立失敗：' + res.error); return }
-      myRoomCode = res.roomCode
-      isHost = true
-      showLobbyErr('')
-      enterRoom()
-    })
-  })
-}
-
-function doJoinRoom() {
-  const name = document.getElementById('lobby-name').value.trim()
-  const code = document.getElementById('lobby-code').value.trim().toUpperCase()
-  if (!name) { showLobbyErr('請先輸入名稱'); return }
-  if (code.length !== 6) { showLobbyErr('房間代碼為 6 位數'); return }
-  myName = name
-  showLobbyErr('連線中，請稍候...')
-  wakeServer().then(() => {
-    initSocket()
-    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
-    socket.emit('join_room', { roomCode: code, name }, (res) => {
-      clearTimeout(done)
-      if (res.error) {
-        const msgs = { ROOM_NOT_FOUND:'找不到房間（代碼錯誤或已過期）', GAME_ALREADY_STARTED:'遊戲已開始', ROOM_FULL:'房間已滿' }
-        showLobbyErr(msgs[res.error] || res.error); return
-      }
-      myRoomCode = code
-      isHost = false
-      showLobbyErr('')
-      enterRoom()
-    })
-  })
-}
-
-function enterRoom() {
-  document.getElementById('room-code-display').textContent = myRoomCode
-  renderRoleBtns([])
-  show('room')
-  document.getElementById('lobby-mug') && drawMug('lobby-mug')
-}
-
-function copyRoomCode() {
-  navigator.clipboard.writeText(myRoomCode).catch(() => {})
-  const btn = event.target.closest('button')
-  btn.textContent = '✅ 已複製！'
-  setTimeout(() => btn.innerHTML = '<span class="emoji">📋</span> 複製代碼', 1500)
-}
-
-function renderRoleBtns(players) {
-  const myPlayer = players.find(p => p.name === myName)
-  myRole = myPlayer?.role || null
-
-  const container = document.getElementById('role-btns')
-  container.innerHTML = ''
-  for (const [role, cfg] of Object.entries(ROLE_CFG_MULTI)) {
-    const owner  = players.find(p => p.role === role)
-    const isMine = owner?.name === myName && !owner?.isBot
-    const isBot  = owner?.isBot
-    const isTakenByHuman = owner && !isMine && !isBot
-
-    const div = document.createElement('div')
-    div.className = 'role-btn' + (isMine ? ' mine' : '') + (isBot ? ' bot-slot' : '') + (isTakenByHuman ? ' taken' : '')
-    div.style.color = cfg.color
-    div.style.borderColor = cfg.color
-
-    if (isMine) {
-      div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">✅ 你選的</div>`
-    } else if (isBot) {
-      div.innerHTML = `
-        <div style="font-size:14px">${cfg.label}</div>
-        <div style="font-size:11px;color:var(--c2);margin-top:4px">🤖 電腦</div>
-        ${isHost ? `<div style="margin-top:6px"><button class="role-sub-btn" style="color:var(--red);border-color:var(--red)" onclick="removeBotMulti('${role}')">✕ 移除</button></div>` : ''}
-      `
-    } else if (isTakenByHuman) {
-      div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">${owner.name}</div>`
-    } else {
-      // 空位
-      if (isHost) {
-        div.innerHTML = `
-          <div style="font-size:14px">${cfg.label}</div>
-          <div style="display:flex;gap:6px;margin-top:6px;justify-content:center">
-            <button class="role-sub-btn" onclick="selectRoleMulti('${role}')">👤 我玩</button>
-            <button class="role-sub-btn" onclick="addBotMulti('${role}')">🤖 電腦</button>
-          </div>`
-      } else {
-        div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">空位</div>`
-        div.onclick = () => selectRoleMulti(role)
-      }
-    }
-    container.appendChild(div)
-  }
-}
-
-function addBotMulti(role) {
-  socket.emit('add_bot', { roomCode: myRoomCode, role }, (res) => {
-    if (res.error) showRoomErr({ ROLE_TAKEN:'角色已被選走', ROOM_FULL:'房間已滿' }[res.error] || res.error)
-  })
-}
-
-function removeBotMulti(role) {
-  socket.emit('remove_bot', { roomCode: myRoomCode, role }, (res) => {
-    if (res.error) showRoomErr(res.error)
-  })
-}
-
-function renderRoomPlayers(players, status) {
-  renderRoleBtns(players)
-  document.getElementById('player-count').textContent = players.length
-
-  const list = document.getElementById('player-list')
-  list.innerHTML = players.map(p => {
-    const isMe = p.name === myName
-    const roleCfg = p.role ? ROLE_CFG_MULTI[p.role] : null
-    return `<div class="player-slot ${p.role ? 'filled' : ''} ${isMe ? 'mine' : ''}">
-      <span style="font-size:16px">${isMe ? '👤' : '🧑'}</span>
-      <span style="flex:1;font-size:13px">${p.name}${isMe ? ' (你)' : ''}</span>
-      <span style="font-size:12px;color:${roleCfg?.color || 'var(--c2)'}">
-        ${roleCfg ? roleCfg.label : '未選角色'}
-      </span>
-    </div>`
-  }).join('')
-
-  // 開始按鈕邏輯（至少 1 真人 + 共 2 人以上，所有人都已選角色）
-  const startBtn = document.getElementById('start-btn')
-  const hint     = document.getElementById('start-hint')
-  const humans   = players.filter(p => !p.isBot)
-  const allChosen = players.length >= 2 && players.every(p => p.role) && humans.length >= 1
-  if (isHost) {
-    startBtn.style.display = allChosen ? 'block' : 'none'
-    hint.textContent = allChosen ? '' :
-      humans.length < 1 ? '至少需要 1 位真人玩家' :
-      players.length < 2 ? '請選角色或加入電腦玩家（至少 2 位）' : '等待所有玩家選好角色'
-  } else {
-    startBtn.style.display = 'none'
-    hint.textContent = '等待房主開始遊戲...'
-  }
-}
-
-function selectRoleMulti(role) {
-  socket.emit('select_role', { roomCode: myRoomCode, role }, (res) => {
-    if (res.error) {
-      const msgs = { ROLE_TAKEN:'角色已被選走', INVALID_ROLE:'無效角色' }
-      showRoomErr(msgs[res.error] || res.error)
-    }
-  })
-}
-
-function doStartGame() {
-  socket.emit('start_game', { roomCode: myRoomCode }, (res) => {
-    if (res.error) {
-      const msgs = { NOT_ENOUGH_PLAYERS:'至少需要2名玩家', NOT_ALL_ROLES_ASSIGNED:'還有玩家未選角色' }
-      showRoomErr(msgs[res.error] || res.error)
-    }
-  })
-}
-
-function leaveRoom() {
-  sessionStorage.removeItem('bgg')
-  if (socket) { socket.disconnect(); socket = null }
-  myRoomCode = null; isHost = false; myRole = null; multiMode = false
-  show('lobby')
-  drawMug('lobby-mug')
-}
-
-function showReconnectOverlay(visible, msg) {
-  let el = document.getElementById('reconnect-overlay')
-  if (!el) {
-    el = document.createElement('div')
-    el.id = 'reconnect-overlay'
-    el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px'
-    el.innerHTML = `
-      <div style="font-size:32px">📡</div>
-      <div id="reconnect-msg" style="font-family:\'DotGothic16\',sans-serif;font-size:14px;color:var(--yel);text-align:center;line-height:2"></div>
-      <div style="font-size:11px;color:var(--c2)">Socket.io 自動重連中...</div>`
-    document.body.appendChild(el)
-  }
-  el.style.display = visible ? 'flex' : 'none'
-  if (msg) document.getElementById('reconnect-msg').textContent = msg
-}
-
-function showGameNotice(msg) {
-  let el = document.getElementById('game-notice')
-  if (!el) {
-    el = document.createElement('div')
-    el.id = 'game-notice'
-    el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:500;background:#0d0900;border:2px solid var(--yel);padding:8px 16px;font-size:12px;color:var(--yel);box-shadow:3px 3px 0 #000;pointer-events:none'
-    document.body.appendChild(el)
-  }
-  el.textContent = msg
-  el.style.opacity = '1'
-  clearTimeout(el._t)
-  el._t = setTimeout(() => { el.style.opacity = '0' }, 4000)
-}
-
-function goSinglePlayer() {
-  multiMode = false
-  show('home')
-  initHome()
-}
-
-
-</script>
 <!--
   字型說明：
   - Cubic 11：開源像素中文字體（支援繁體中文）
@@ -1098,6 +675,444 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════
+// 多人房間制（Socket.io）
+// ═══════════════════════════════════════════════════════════════
+
+const SERVER_URL = 'https://beer-game-jnsf.onrender.com'
+let socket = null
+let myRoomCode = null
+let myName = null
+let isHost = false
+let myRole = null
+let multiMode = false  // true=多人, false=單人
+
+const ROLE_CFG_MULTI = {
+  retailer:    { label:'🏪 零售商', color:'var(--blue)' },
+  wholesaler:  { label:'📦 批發商', color:'var(--grn)'  },
+  distributor: { label:'🚛 分銷商', color:'var(--yel)'  },
+  manufacturer:{ label:'🏭 製造商', color:'var(--red)'  },
+}
+
+function initSocket() {
+  if (socket) return
+  socket = io(SERVER_URL, { autoConnect: true, reconnectionAttempts: 5 })
+
+  socket.on('connect', () => {
+    console.log('✅ 已連線伺服器')
+    // 嘗試自動重連進行中的遊戲
+    const saved = sessionStorage.getItem('bgg')
+    if (saved) {
+      const { code, name, role } = JSON.parse(saved)
+      socket.emit('reconnect_game', { roomCode: code, name, role }, (res) => {
+        if (res.error) { sessionStorage.removeItem('bgg'); showReconnectOverlay(false) }
+      })
+    }
+  })
+  socket.on('connect_error', () => showLobbyErr('無法連接伺服器，請稍後再試'))
+
+  socket.on('game_resumed', ({ role, week, inventory, backlog, pipeline0, pipeline1, history }) => {
+    ROLE = role
+    GS.roles[ROLE].inventory = inventory
+    GS.roles[ROLE].backlog   = backlog
+    GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
+    GS.roles[ROLE].history   = history || []
+    GS.week = week
+    showReconnectOverlay(false)
+    show('game')
+    refreshUI()
+    startTimer()
+  })
+
+  socket.on('player_disconnected', ({ name, role }) => {
+    if (name === myName) {
+      showReconnectOverlay(true, '網路中斷，重新連線中...')
+    } else {
+      showGameNotice(`⚠️ ${name} 斷線，60秒內未重連將由電腦接管`)
+    }
+  })
+
+  socket.on('player_reconnected', ({ name, timedOut }) => {
+    if (timedOut) {
+      showGameNotice(`🤖 ${name} 已轉為電腦接管`)
+    } else {
+      showGameNotice(`✅ ${name} 已重新連線`)
+    }
+    showReconnectOverlay(false)
+  })
+
+  // 房主重開遊戲室 → 所有人回到等待室
+  socket.on('room_reset', ({ roomCode }) => {
+    GS=null; SNAP=null; hCash=[]; hInv=[]; hOrd=[]
+    multiMode=true
+    myRoomCode=roomCode
+    show('room')
+  })
+
+  // 房主離開複盤頁 → 非房主只能回大廳
+  socket.on('host_left', () => {
+    renderDebriefActions(false)
+  })
+
+  // 房間狀態更新（有人加入/選角色）
+  socket.on('room_updated', ({ players, status }) => {
+    renderRoomPlayers(players, status)
+  })
+
+  // 遊戲開始
+  socket.on('game_started', ({ role, week, timeLimit, inventory, backlog, pipeline0, pipeline1 }) => {
+    try {
+      try { sessionStorage.setItem('bgg', JSON.stringify({ code: myRoomCode, name: myName, role })) } catch(_) {}
+      ROLE = role
+      multiMode = true
+      const dem = genDemand()
+      GS = initState(dem)
+      GS.roles[ROLE].inventory = inventory
+      GS.roles[ROLE].backlog = backlog
+      GS.roles[ROLE].pipeline = [pipeline0, pipeline1]
+      SNAP = null; hCash = []; hInv = []; hOrd = []
+      const cfg = RCFG[ROLE]
+      document.getElementById('hud-role').textContent = cfg.emoji + ' ' + cfg.name
+      document.getElementById('hud-role').style.color = cfg.color
+      document.getElementById('g-azq').textContent = cfg.qlabel
+      document.getElementById('g-dlabel').textContent = cfg.dlabel
+      document.getElementById('g-sell-badge').textContent = '$' + SELL_PRICE[ROLE] + '/箱'
+      setTimeout(() => drawSpr('g-spr', ROLE, 40, 48), 30)
+      show('game')
+      startTimer()
+      refreshUI()
+    } catch(e) {
+      showRoomErr('game_started 錯誤: ' + e.message)
+    }
+  })
+
+  // 週結算：只更新狀態，等 week_started 再刷 UI
+  socket.on('week_results', ({ week, mine, consumerDemand }) => {
+    try {
+      const revenue     = mine.sold * SELL_PRICE[ROLE]
+      const procurement = mine.ord  * BUY_PRICE[ROLE]
+      const weekProfit  = revenue - mine.hc - mine.sc - procurement
+      GS.roles[ROLE].inventory = mine.inv
+      GS.roles[ROLE].backlog   = mine.bl
+      GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
+      GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
+      GS.roles[ROLE].history = GS.roles[ROLE].history || []
+      GS.roles[ROLE].history.push({
+        wk: week, recv: mine.recv, dem: mine.dem,
+        sold: mine.sold, inv: mine.inv, bl: mine.bl,
+        ord: mine.ord, hc: mine.hc, sc: mine.sc
+      })
+      SNAP = { [ROLE]: {
+        wk: week, recv: mine.recv, dem: mine.dem,
+        sold: mine.sold, inv: mine.inv, bl: mine.bl,
+        ord: mine.ord, revenue, hc: mine.hc, sc: mine.sc, weekProfit,
+        profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
+      }}
+      hCash.push(GS.roles[ROLE].cash)
+      hInv.push(mine.inv)
+      hOrd.push(mine.ord)
+      // DO NOT call refreshUI here — week_started will do it after updating pipeline/week
+    } catch(e) {
+      document.getElementById('g-wait').innerHTML =
+        `<div class="pbox" style="padding:12px;color:var(--red)">week_results 錯誤: ${e.message}</div>`
+    }
+  })
+
+  // 下週開始
+  socket.on('week_started', ({ week, inventory, backlog, pipeline0, pipeline1 }) => {
+    try {
+      GS.roles[ROLE].inventory = inventory
+      GS.roles[ROLE].backlog   = backlog
+      GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
+      GS.week = week
+      document.getElementById('g-wait').style.display = 'none'
+      document.getElementById('g-az').style.display = 'block'
+      submitting = false
+      refreshUI()
+      startTimer()
+    } catch(e) {
+      document.getElementById('g-wait').innerHTML =
+        `<div class="pbox" style="padding:12px;color:var(--red)">week_started 錯誤: ${e.message}</div>`
+    }
+  })
+
+  // 遊戲結束
+  socket.on('game_finished', ({ results, fullHistory }) => {
+    GS.status = 'done'
+    // 從 fullHistory 重算每個角色的帳戶（含採購成本）
+    for (const role of ROLES) {
+      const hist = fullHistory[role] || []
+      let cash = START_CAPITAL, profit = 0
+      for (const w of hist) {
+        const wp = w.sold * SELL_PRICE[role] - w.hc - w.sc - w.ord * BUY_PRICE[role]
+        profit += wp
+        cash = Math.max(-1000, cash + wp)
+      }
+      GS.roles[role].cash      = cash
+      GS.roles[role].profit    = profit
+      GS.roles[role].history   = hist
+      GS.roles[role].totalSold = hist.reduce((s,w)=>s+w.sold, 0)
+      GS.roles[role].totalHC   = hist.reduce((s,w)=>s+w.hc, 0)
+      GS.roles[role].totalSC   = hist.reduce((s,w)=>s+w.sc, 0)
+    }
+    // 用 server 真實需求曲線更新複盤資訊
+    if (results.demandInfo) {
+      GS.curve    = results.demandInfo.curve
+      GS.mode     = results.demandInfo.mode
+      GS.modeDesc = results.demandInfo.modeDesc || ''
+      GS.base     = results.demandInfo.base
+      GS.peak     = results.demandInfo.peak
+    }
+    showDebrief()
+  })
+
+  // 進度（幾人已提交）
+  socket.on('submission_progress', ({ submittedCount, totalPlayers }) => {
+    const waitEl = document.getElementById('g-wait')
+    if (waitEl.style.display !== 'none') {
+      waitEl.innerHTML = `
+        <div class="pbox" style="padding:16px;text-align:center">
+          <div style="font-size:15px;color:var(--grn)">✅ 已提交</div>
+          <div style="font-size:12px;color:var(--c2);margin-top:6px">等待其他玩家 ${submittedCount}/${totalPlayers}</div>
+        </div>`
+    }
+  })
+}
+
+// 大廳操作
+function showLobbyErr(msg) {
+  document.getElementById('lobby-err').textContent = msg
+  setTimeout(() => document.getElementById('lobby-err').textContent = '', 3000)
+}
+function showRoomErr(msg) {
+  document.getElementById('room-err').textContent = msg
+  setTimeout(() => document.getElementById('room-err').textContent = '', 3000)
+}
+
+async function wakeServer() {
+  try { await fetch(SERVER_URL + '/health') } catch(e) {}
+}
+
+function doCreateRoom() {
+  const name = document.getElementById('lobby-name').value.trim()
+  if (!name) { showLobbyErr('請先輸入名稱'); return }
+  myName = name
+  showLobbyErr('連線中，請稍候...')
+  wakeServer().then(() => {
+    initSocket()
+    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
+    socket.emit('create_room', { name }, (res) => {
+      clearTimeout(done)
+      if (res.error) { showLobbyErr('建立失敗：' + res.error); return }
+      myRoomCode = res.roomCode
+      isHost = true
+      showLobbyErr('')
+      enterRoom()
+    })
+  })
+}
+
+function doJoinRoom() {
+  const name = document.getElementById('lobby-name').value.trim()
+  const code = document.getElementById('lobby-code').value.trim().toUpperCase()
+  if (!name) { showLobbyErr('請先輸入名稱'); return }
+  if (code.length !== 6) { showLobbyErr('房間代碼為 6 位數'); return }
+  myName = name
+  showLobbyErr('連線中，請稍候...')
+  wakeServer().then(() => {
+    initSocket()
+    const done = setTimeout(() => showLobbyErr('連線逾時，請重試'), 60000)
+    socket.emit('join_room', { roomCode: code, name }, (res) => {
+      clearTimeout(done)
+      if (res.error) {
+        const msgs = { ROOM_NOT_FOUND:'找不到房間（代碼錯誤或已過期）', GAME_ALREADY_STARTED:'遊戲已開始', ROOM_FULL:'房間已滿' }
+        showLobbyErr(msgs[res.error] || res.error); return
+      }
+      myRoomCode = code
+      isHost = false
+      showLobbyErr('')
+      enterRoom()
+    })
+  })
+}
+
+function enterRoom() {
+  document.getElementById('room-code-display').textContent = myRoomCode
+  renderRoleBtns([])
+  show('room')
+  document.getElementById('lobby-mug') && drawMug('lobby-mug')
+}
+
+function copyRoomCode() {
+  navigator.clipboard.writeText(myRoomCode).catch(() => {})
+  const btn = event.target.closest('button')
+  btn.textContent = '✅ 已複製！'
+  setTimeout(() => btn.innerHTML = '<span class="emoji">📋</span> 複製代碼', 1500)
+}
+
+function renderRoleBtns(players) {
+  const myPlayer = players.find(p => p.name === myName)
+  myRole = myPlayer?.role || null
+
+  const container = document.getElementById('role-btns')
+  container.innerHTML = ''
+  for (const [role, cfg] of Object.entries(ROLE_CFG_MULTI)) {
+    const owner  = players.find(p => p.role === role)
+    const isMine = owner?.name === myName && !owner?.isBot
+    const isBot  = owner?.isBot
+    const isTakenByHuman = owner && !isMine && !isBot
+
+    const div = document.createElement('div')
+    div.className = 'role-btn' + (isMine ? ' mine' : '') + (isBot ? ' bot-slot' : '') + (isTakenByHuman ? ' taken' : '')
+    div.style.color = cfg.color
+    div.style.borderColor = cfg.color
+
+    if (isMine) {
+      div.innerHTML = `
+        <div style="font-size:14px">${cfg.label}</div>
+        <div style="font-size:11px;color:var(--c2);margin-top:4px">✅ 你選的</div>
+        <div style="margin-top:6px">
+          <button class="role-sub-btn" style="color:var(--yel);border-color:var(--yel)" onclick="deselectRoleMulti()">↩ 換角色</button>
+        </div>`
+    } else if (isBot) {
+      div.innerHTML = `
+        <div style="font-size:14px">${cfg.label}</div>
+        <div style="font-size:11px;color:var(--c2);margin-top:4px">🤖 電腦</div>
+        ${isHost ? `<div style="margin-top:6px"><button class="role-sub-btn" style="color:var(--red);border-color:var(--red)" onclick="removeBotMulti('${role}')">✕ 移除</button></div>` : ''}
+      `
+    } else if (isTakenByHuman) {
+      div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">${owner.name}</div>`
+    } else {
+      // 空位
+      if (isHost) {
+        div.innerHTML = `
+          <div style="font-size:14px">${cfg.label}</div>
+          <div style="display:flex;gap:6px;margin-top:6px;justify-content:center">
+            <button class="role-sub-btn" onclick="selectRoleMulti('${role}')">👤 我玩</button>
+            <button class="role-sub-btn" onclick="addBotMulti('${role}')">🤖 電腦</button>
+          </div>`
+      } else {
+        div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">空位</div>`
+        div.onclick = () => selectRoleMulti(role)
+      }
+    }
+    container.appendChild(div)
+  }
+}
+
+function addBotMulti(role) {
+  socket.emit('add_bot', { roomCode: myRoomCode, role }, (res) => {
+    if (res.error) showRoomErr({ ROLE_TAKEN:'角色已被選走', ROOM_FULL:'房間已滿' }[res.error] || res.error)
+  })
+}
+
+function removeBotMulti(role) {
+  socket.emit('remove_bot', { roomCode: myRoomCode, role }, (res) => {
+    if (res.error) showRoomErr(res.error)
+  })
+}
+
+function renderRoomPlayers(players, status) {
+  renderRoleBtns(players)
+  document.getElementById('player-count').textContent = players.length
+
+  const list = document.getElementById('player-list')
+  list.innerHTML = players.map(p => {
+    const isMe = p.name === myName
+    const roleCfg = p.role ? ROLE_CFG_MULTI[p.role] : null
+    return `<div class="player-slot ${p.role ? 'filled' : ''} ${isMe ? 'mine' : ''}">
+      <span style="font-size:16px">${isMe ? '👤' : '🧑'}</span>
+      <span style="flex:1;font-size:13px">${p.name}${isMe ? ' (你)' : ''}</span>
+      <span style="font-size:12px;color:${roleCfg?.color || 'var(--c2)'}">
+        ${roleCfg ? roleCfg.label : '未選角色'}
+      </span>
+    </div>`
+  }).join('')
+
+  // 開始按鈕邏輯（至少 1 真人 + 共 2 人以上，所有人都已選角色）
+  const startBtn = document.getElementById('start-btn')
+  const hint     = document.getElementById('start-hint')
+  const humans   = players.filter(p => !p.isBot)
+  const allChosen = players.length >= 2 && players.every(p => p.role) && humans.length >= 1
+  if (isHost) {
+    startBtn.style.display = allChosen ? 'block' : 'none'
+    hint.textContent = allChosen ? '' :
+      humans.length < 1 ? '至少需要 1 位真人玩家' :
+      players.length < 2 ? '請選角色或加入電腦玩家（至少 2 位）' : '等待所有玩家選好角色'
+  } else {
+    startBtn.style.display = 'none'
+    hint.textContent = '等待房主開始遊戲...'
+  }
+}
+
+function selectRoleMulti(role) {
+  socket.emit('select_role', { roomCode: myRoomCode, role }, (res) => {
+    if (res.error) {
+      const msgs = { ROLE_TAKEN:'角色已被選走', INVALID_ROLE:'無效角色' }
+      showRoomErr(msgs[res.error] || res.error)
+    }
+  })
+}
+
+function deselectRoleMulti() {
+  socket.emit('deselect_role', { roomCode: myRoomCode }, (res) => {
+    if (res.error) showRoomErr(res.error)
+  })
+}
+
+function doStartGame() {
+  socket.emit('start_game', { roomCode: myRoomCode }, (res) => {
+    if (res.error) {
+      const msgs = { NOT_ENOUGH_PLAYERS:'至少需要2名玩家', NOT_ALL_ROLES_ASSIGNED:'還有玩家未選角色' }
+      showRoomErr(msgs[res.error] || res.error)
+    }
+  })
+}
+
+function leaveRoom() {
+  sessionStorage.removeItem('bgg')
+  if (socket) { socket.disconnect(); socket = null }
+  myRoomCode = null; isHost = false; myRole = null; multiMode = false
+  show('lobby')
+  drawMug('lobby-mug')
+}
+
+function showReconnectOverlay(visible, msg) {
+  let el = document.getElementById('reconnect-overlay')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'reconnect-overlay'
+    el.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.88);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px'
+    el.innerHTML = `
+      <div style="font-size:32px">📡</div>
+      <div id="reconnect-msg" style="font-family:\'DotGothic16\',sans-serif;font-size:14px;color:var(--yel);text-align:center;line-height:2"></div>
+      <div style="font-size:11px;color:var(--c2)">Socket.io 自動重連中...</div>`
+    document.body.appendChild(el)
+  }
+  el.style.display = visible ? 'flex' : 'none'
+  if (msg) document.getElementById('reconnect-msg').textContent = msg
+}
+
+function showGameNotice(msg) {
+  let el = document.getElementById('game-notice')
+  if (!el) {
+    el = document.createElement('div')
+    el.id = 'game-notice'
+    el.style.cssText = 'position:fixed;top:60px;left:50%;transform:translateX(-50%);z-index:500;background:#0d0900;border:2px solid var(--yel);padding:8px 16px;font-size:12px;color:var(--yel);box-shadow:3px 3px 0 #000;pointer-events:none'
+    document.body.appendChild(el)
+  }
+  el.textContent = msg
+  el.style.opacity = '1'
+  clearTimeout(el._t)
+  el._t = setTimeout(() => { el.style.opacity = '0' }, 4000)
+}
+
+function goSinglePlayer() {
+  multiMode = false
+  show('home')
+  initHome()
+}
+
 // ═══════════════════════════════════════
 // SPRITES 20×24
 // ═══════════════════════════════════════
@@ -1303,6 +1318,7 @@ function auto(role,state){
 let GS=null,ROLE=null,SNAP=null
 let hCash=[],hInv=[],hOrd=[]
 let timerID=null,tLeft=60
+let submitting=false
 let HI=JSON.parse(localStorage.getItem('bgh6')||'[]')
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById('s-'+id).classList.add('on');window.scrollTo(0,0)}
@@ -1374,6 +1390,20 @@ function enterGame(){
   refreshUI();show('game');startTimer()
 }
 
+let _audioCtx = null
+function beep() {
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+    const osc = _audioCtx.createOscillator()
+    const gain = _audioCtx.createGain()
+    osc.connect(gain); gain.connect(_audioCtx.destination)
+    osc.frequency.value = 880
+    gain.gain.setValueAtTime(0.08, _audioCtx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, _audioCtx.currentTime + 0.12)
+    osc.start(); osc.stop(_audioCtx.currentTime + 0.12)
+  } catch(_) {}
+}
+
 function startTimer(){
   clearInterval(timerID);tLeft=60
   const el=document.getElementById('hud-timer')
@@ -1384,6 +1414,7 @@ function startTimer(){
   timerID=setInterval(()=>{
     tLeft--;el.textContent=tLeft
     el.style.color=tLeft<=10?'var(--red)':tLeft<=20?'var(--yel)':'var(--gold)'
+    if(tLeft<=10&&tLeft>0)beep()
     if(tLeft<=0){clearInterval(timerID);doSubmit(0)}
   },1000)
 }
@@ -1535,6 +1566,8 @@ function submitOrder(){
   doSubmit(v)
 }
 function doSubmit(qty){
+  if (submitting) return
+  submitting = true
   qty=Math.min(Math.max(0,Math.round(qty)),getMaxOrder())
   clearInterval(timerID)
   document.getElementById('hud-timer').classList.remove('blink')
@@ -1688,6 +1721,39 @@ function showDebrief(){
   HI.push({r:ROLE,c:myCash});HI.sort((a,b)=>b.c-a.c);HI=HI.slice(0,10)
   localStorage.setItem('bgh6',JSON.stringify(HI))
 
+  // 每週明細表
+  const hist = GS.roles[ROLE].history || []
+  if (hist.length > 0) {
+    const tableHtml = `
+      <div class="pbox" style="padding:14px;margin-bottom:14px">
+        <div style="font-size:14px;color:var(--c1);margin-bottom:10px">📋 每週明細</div>
+        <div style="overflow-x:auto">
+          <table style="width:100%;font-size:11px;border-collapse:collapse;color:var(--c2)">
+            <tr style="color:var(--c0);border-bottom:1px solid var(--b1)">
+              <th style="padding:4px;text-align:center">週</th>
+              <th style="padding:4px;text-align:right">收貨</th>
+              <th style="padding:4px;text-align:right">需求</th>
+              <th style="padding:4px;text-align:right">出貨</th>
+              <th style="padding:4px;text-align:right">庫存</th>
+              <th style="padding:4px;text-align:right">積壓</th>
+              <th style="padding:4px;text-align:right">下單</th>
+            </tr>
+            ${hist.map(w => `
+              <tr style="border-bottom:1px solid #1a1a2e">
+                <td style="padding:4px;text-align:center;color:var(--gold)">${w.wk}</td>
+                <td style="padding:4px;text-align:right;color:var(--blue)">${w.recv}</td>
+                <td style="padding:4px;text-align:right">${w.dem}</td>
+                <td style="padding:4px;text-align:right;color:var(--grn)">${w.sold}</td>
+                <td style="padding:4px;text-align:right;color:${w.inv<4?'var(--red)':'var(--c1)'}">${w.inv}</td>
+                <td style="padding:4px;text-align:right;color:${w.bl>0?'var(--red)':'var(--c2)'}">${w.bl}</td>
+                <td style="padding:4px;text-align:right;color:var(--yel)">${w.ord}</td>
+              </tr>`).join('')}
+          </table>
+        </div>
+      </div>`
+    document.getElementById('db-actions').insertAdjacentHTML('beforebegin', tableHtml)
+  }
+
   // 複盤頁按鈕
   renderDebriefActions(isHost)
 }
@@ -1729,6 +1795,7 @@ function doReturnToRoom(){
 
 function restart(){
   clearInterval(timerID)
+  submitting = false
   try { sessionStorage.removeItem('bgg') } catch(_) {}
   if (socket) { socket.disconnect(); socket = null }
   GS=null;ROLE=null;SNAP=null;hCash=[];hInv=[];hOrd=[]

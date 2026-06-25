@@ -1,7 +1,7 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom } = require('./RoomManager')
+const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom } = require('./RoomManager')
 const { processWeek, calculateResults } = require('./GameEngine')
 const { ROUND_TIME_SECONDS, ROLES } = require('./gameConfig')
 
@@ -165,6 +165,13 @@ io.on('connection', (socket) => {
 
   socket.on('select_role', ({ roomCode, role }, cb) => {
     const result = selectRole(roomCode.toUpperCase(), socket.id, role)
+    if (result.error) return cb({ error: result.error })
+    cb({ ok: true })
+    broadcastRoom(roomCode.toUpperCase())
+  })
+
+  socket.on('deselect_role', ({ roomCode }, cb) => {
+    const result = deselectRole(roomCode.toUpperCase(), socket.id)
     if (result.error) return cb({ error: result.error })
     cb({ ok: true })
     broadcastRoom(roomCode.toUpperCase())
