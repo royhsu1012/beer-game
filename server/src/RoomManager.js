@@ -12,8 +12,19 @@ function generateRoomCode() {
 
 function createRoom(socketId, name) {
   const code = generateRoomCode()
-  rooms.set(code, { code, status: 'waiting', players: [], gameState: null, timerHandle: null })
+  rooms.set(code, { code, status: 'waiting', players: [], gameState: null, timerHandle: null, creatorId: socketId })
   return rooms.get(code)
+}
+
+function resetRoom(code) {
+  const room = getRoom(code)
+  if (!room) return { error: 'ROOM_NOT_FOUND' }
+  if (room.timerHandle) { clearTimeout(room.timerHandle); room.timerHandle = null }
+  room.status = 'waiting'
+  room.gameState = null
+  // Remove disconnected players, keep bots and connected humans
+  room.players = room.players.filter(p => p.isBot || (!p.disconnected && p.socketId))
+  return { ok: true, room }
 }
 
 function getRoom(code) { return rooms.get(code) || null }
@@ -120,4 +131,4 @@ function findPlayerRoom(socketId) {
   return null
 }
 
-module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom }
+module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom }

@@ -72,6 +72,19 @@ function initSocket() {
     showReconnectOverlay(false)
   })
 
+  // 房主重開遊戲室 → 所有人回到等待室
+  socket.on('room_reset', ({ roomCode }) => {
+    GS=null; SNAP=null; hCash=[]; hInv=[]; hOrd=[]
+    multiMode=true
+    myRoomCode=roomCode
+    show('room')
+  })
+
+  // 房主離開複盤頁 → 非房主只能回大廳
+  socket.on('host_left', () => {
+    renderDebriefActions(false)
+  })
+
   // 房間狀態更新（有人加入/選角色）
   socket.on('room_updated', ({ players, status }) => {
     renderRoomPlayers(players, status)
@@ -1080,10 +1093,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div id="db-lesson" style="font-size:13px;line-height:2"></div>
   </div>
 
-  <button class="pbtn pbtn-b" onclick="restart()"
-    style="width:100%;font-size:15px;padding:14px;text-align:center">
-    ← 回到首頁
-  </button>
+  <div id="db-actions"></div>
 </div>
 </div>
 
@@ -1677,6 +1687,44 @@ function showDebrief(){
 
   HI.push({r:ROLE,c:myCash});HI.sort((a,b)=>b.c-a.c);HI=HI.slice(0,10)
   localStorage.setItem('bgh6',JSON.stringify(HI))
+
+  // 複盤頁按鈕
+  renderDebriefActions(isHost)
+}
+
+function renderDebriefActions(hostIsPresent){
+  const el=document.getElementById('db-actions')
+  if(!multiMode){
+    el.innerHTML=`<button class="pbtn pbtn-b" onclick="restart()"
+      style="width:100%;font-size:15px;padding:14px;text-align:center">← 回到首頁</button>`
+    return
+  }
+  if(isHost){
+    el.innerHTML=`
+      <button class="pbtn pbtn-g" onclick="doReturnToRoom()"
+        style="width:100%;font-size:15px;padding:14px;text-align:center;margin-bottom:10px">
+        ▶ 重開遊戲室
+      </button>
+      <button class="pbtn pbtn-b" onclick="restart()"
+        style="width:100%;font-size:14px;padding:10px;text-align:center">← 回到大廳</button>`
+  } else if(hostIsPresent){
+    el.innerHTML=`
+      <div style="font-size:12px;color:var(--c2);text-align:center;margin-bottom:8px">等待房主重開遊戲室…</div>
+      <button class="pbtn pbtn-b" onclick="restart()"
+        style="width:100%;font-size:14px;padding:10px;text-align:center">← 回到大廳</button>`
+  } else {
+    el.innerHTML=`
+      <div style="font-size:12px;color:var(--red);text-align:center;margin-bottom:8px">房主已離開</div>
+      <button class="pbtn pbtn-b" onclick="restart()"
+        style="width:100%;font-size:14px;padding:10px;text-align:center">← 回到大廳</button>`
+  }
+}
+
+function doReturnToRoom(){
+  socket.emit('return_to_room', {}, (res)=>{
+    if(res.error){ showRoomErr('重開失敗：'+res.error); return }
+    // server will emit room_reset to all in room
+  })
 }
 
 function restart(){

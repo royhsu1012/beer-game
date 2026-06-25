@@ -1,7 +1,7 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom } = require('./RoomManager')
+const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom } = require('./RoomManager')
 const { processWeek, calculateResults } = require('./GameEngine')
 const { ROUND_TIME_SECONDS, ROLES } = require('./gameConfig')
 
@@ -234,11 +234,28 @@ io.on('connection', (socket) => {
     io.to(code).emit('player_reconnected', { name })
   })
 
+  socket.on('return_to_room', (_, cb) => {
+    const found = findPlayerRoom(socket.id)
+    if (!found) return cb({ error: 'ROOM_NOT_FOUND' })
+    const { code, room } = found
+    if (room.creatorId !== socket.id) return cb({ error: 'NOT_HOST' })
+    const result = resetRoom(code)
+    if (result.error) return cb({ error: result.error })
+    log('room_reset', { room: code })
+    cb({ ok: true })
+    broadcastRoom(code)
+    io.to(code).emit('room_reset', { roomCode: code })
+  })
+
   socket.on('disconnect', () => {
     log('disconnect', { id: socket.id })
     const found = findPlayerRoom(socket.id)
     if (!found) return
     const { code, room } = found
+    // Notify others if host disconnects from a finished game
+    if (room && room.status === 'finished' && room.creatorId === socket.id) {
+      io.to(code).emit('host_left')
+    }
     const result = removePlayer(code, socket.id)
     if (room && room.status === 'waiting') {
       if (getRoom(code)) broadcastRoom(code)
