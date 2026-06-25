@@ -150,9 +150,12 @@ function initSocket() {
         profit += wp
         cash = Math.max(-1000, cash + wp)
       }
-      GS.roles[role].cash    = cash
-      GS.roles[role].profit  = profit
-      GS.roles[role].history = hist
+      GS.roles[role].cash      = cash
+      GS.roles[role].profit    = profit
+      GS.roles[role].history   = hist
+      GS.roles[role].totalSold = hist.reduce((s,w)=>s+w.sold, 0)
+      GS.roles[role].totalHC   = hist.reduce((s,w)=>s+w.hc, 0)
+      GS.roles[role].totalSC   = hist.reduce((s,w)=>s+w.sc, 0)
     }
     // 用 server 真實需求曲線更新複盤資訊
     if (results.demandInfo) {
@@ -1513,7 +1516,10 @@ function renderChart(id,data,color){
   }
 }
 
-function getMaxOrder(){return Math.max(0,Math.floor(GS.roles[ROLE].cash/BUY_PRICE[ROLE]))}
+function getMaxOrder(){
+  if(!GS||!ROLE||GS.roles[ROLE]===undefined)return 999
+  return Math.max(0,Math.floor(GS.roles[ROLE].cash/BUY_PRICE[ROLE]))
+}
 
 function submitOrder(){
   const v=parseInt(document.getElementById('g-input').value)
