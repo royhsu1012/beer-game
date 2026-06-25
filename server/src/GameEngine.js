@@ -1,4 +1,4 @@
-const { ROLES, HOLDING_COST, SHORTAGE_COST, TOTAL_WEEKS, INITIAL_INVENTORY, INITIAL_PIPELINE, generateDemandCurve } = require('./gameConfig')
+const { ROLES, ROLE_COSTS, TOTAL_WEEKS, INITIAL_INVENTORY, INITIAL_PIPELINE, generateDemandCurve } = require('./gameConfig')
 
 function initGameState() {
   // 每局游戏生成新的需求曲线
@@ -58,8 +58,9 @@ function processWeek(state, orders) {
 
   const costs = {}
   for (const role of ROLES) {
-    const holdingCost = inventoryAfterShipping[role] * HOLDING_COST
-    const shortageCost = newBacklog[role] * SHORTAGE_COST
+    const { holding, shortage } = ROLE_COSTS[role]
+    const holdingCost = inventoryAfterShipping[role] * holding
+    const shortageCost = newBacklog[role] * shortage
     costs[role] = { holdingCost, shortageCost, weekCost: holdingCost + shortageCost }
   }
 

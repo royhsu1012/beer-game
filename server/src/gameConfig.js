@@ -35,8 +35,8 @@ function makeLCG(seed) {
 function generateDemandCurve(seed) {
   const rng = makeLCG(seed || (Date.now() % 999983))
 
-  const base     = rng.range(3.5, 5.5)   // 基礎需求均值
-  const amp1     = rng.range(1.8, 4.2)   // 主週期振幅
+  const base     = rng.range(4.0, 7.0)   // 基礎需求均值
+  const amp1     = rng.range(3.0, 6.0)   // 主週期振幅
   const period1  = rng.range(6,  14)     // 主週期長度（週）
   const phase1   = rng.range(0, 6.28)    // 主週期相位
   const amp2     = rng.range(0.5, 1.8)   // 次諧波振幅
@@ -45,13 +45,13 @@ function generateDemandCurve(seed) {
   const trend    = rng.range(-0.1, 0.15) // 長期趨勢（負=下降 正=上升）
   const noiseAmp = rng.range(0.3,  1.1)  // 白噪音強度
 
-  // 突發衝擊事件（0-2個）
-  const shockCount = rng.int(0, 2)
+  // 突發衝擊事件（至少 1 次，最多 3 次）
+  const shockCount = rng.int(1, 3)
   const shocks = []
   for (let i = 0; i < shockCount; i++) {
     shocks.push({
       week: rng.int(3, 18),
-      magnitude: rng.range(2.5, 7.0),
+      magnitude: rng.range(4.0, 10.0),  // 衝擊強度加大
       sign: rng.next() > 0.4 ? 1 : -1, // 70% 正向衝擊
     })
   }
@@ -113,8 +113,13 @@ const GAME_CONFIG = {
   LEAD_TIME:         2,        // 前置時間（週）
   INITIAL_INVENTORY: 12,       // 期初庫存（各角色相同）
   INITIAL_PIPELINE:  [4, 4],   // 期初在途 [下週到, 後週到]
-  HOLDING_COST:      0.50,     // 持有成本（$/箱/週）
-  SHORTAGE_COST:     1.00,     // 缺貨成本（$/箱/週）
+  // 各角色不同成本結構
+  ROLE_COSTS: {
+    retailer:     { holding: 0.10, shortage: 1.00 },
+    wholesaler:   { holding: 0.15, shortage: 0.70 },
+    distributor:  { holding: 0.20, shortage: 0.50 },
+    manufacturer: { holding: 0.30, shortage: 0.30 },
+  },
   ROUND_TIME_SECONDS:60,       // 每週決策時限
 
   ROLES: ['retailer', 'wholesaler', 'distributor', 'manufacturer'],
