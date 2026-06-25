@@ -1467,12 +1467,11 @@ function refreshUI(){
   document.getElementById('g-input').focus()
   // 更新訂購上限提示
   const maxOrd=getMaxOrder()
-  const cash=GS.roles[ROLE].cash
   document.getElementById('g-input').max=maxOrd
-  const hint=document.getElementById('g-budget-hint')
-  if(hint){
-    hint.textContent=`資金 $${cash.toFixed(0)}・進價 $${BUY_PRICE[ROLE]}/箱・最多可訂 ${maxOrd} 箱`
-    hint.style.color=cash<=0?'var(--red)':'var(--c2)'
+  const budgetHintEl=document.getElementById('g-budget-hint')
+  if(budgetHintEl){
+    budgetHintEl.textContent=`資金 $${cash.toFixed(0)}・進價 $${BUY_PRICE[ROLE]}/箱・最多可訂 ${maxOrd} 箱`
+    budgetHintEl.style.color=cash<=0?'var(--red)':'var(--c2)'
   }
 }
 
