@@ -1,168 +1,186 @@
-# 🍺 啤酒分销游戏 Beer Distribution Game
+# 🍺 啤酒供應鏈遊戲 Beer Distribution Game
 
-> 四人线上供应链教学平台 · 体验牛鞭效应 · 像素风格角色
+> 四人連線・供應鏈教學模擬・體驗牛鞭效應・Pixel Art 風格
 
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Node](https://img.shields.io/badge/node-v22+-green)
-![React](https://img.shields.io/badge/react-18-61dafb)
-![Cost](https://img.shields.io/badge/hosting-FREE-brightgreen)
+[![Node](https://img.shields.io/badge/Node.js-v22+-green?logo=node.js)](https://nodejs.org)
+[![React](https://img.shields.io/badge/React-18-61dafb?logo=react)](https://react.dev)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Cost](https://img.shields.io/badge/Hosting-完全免費-brightgreen)](#部署上線完全免費)
 
 ---
 
-## 🎮 游戏简介
+## 🎮 遊戲簡介
 
-基于麻省理工学院（MIT）Sloan 管理学院的「啤酒分销游戏」，四名玩家分别扮演供应链中的不同角色，在**信息不对称**的情况下做决策，亲身体验**牛鞭效应（Bullwhip Effect）**的产生与影响。
+基於麻省理工學院（MIT）Sloan 管理學院的「啤酒分銷遊戲」，讓四名玩家分別扮演供應鏈中的不同角色，在**資訊不對稱**的情況下做決策，親身體驗**牛鞭效應（Bullwhip Effect）**的產生與影響。
 
 ```
-消费者需求
-    ↓
-🏪 零售商  →  📦 批发商  →  🚛 分销商  →  🏭 制造商
+消費者需求（動態隨機）
+      ↓
+🏪 零售商  →  📦 批發商  →  🚛 分銷商  →  🏭 製造商
 ```
 
-每个玩家**只能看到自己的数据**，无法得知上下游的库存或订单量。
+每個玩家**只能看到自己的數據**，無法得知上下游的庫存或訂單量。
 
 ---
 
-## ✨ 核心特色
+## ✨ 特色功能
 
-- 🎭 **四角色像素风格角色** — 零售商・批发商・分销商・制造商，各有专属视觉
-- 🎲 **动态季节性需求** — 每局随机生成（夏季旺季 / 冬季旺季 / 双峰 / 突发冲击），游戏结束才揭露
-- 🔒 **信息隔离** — 服务器端保证每人只收到自己角色的数据
-- ⚡ **实时多人** — WebSocket 同步，支援手机浏览器
-- 📊 **复盘可视化** — 游戏结束后揭露牛鞭效应全景图
-- 💰 **零成本部署** — Vercel + Render 完全免费
+| 功能 | 說明 |
+|------|------|
+| 🎭 Pixel Art 角色 | 四個 20×24 精細像素角色，含動畫 |
+| 🔤 中文像素字體 | 採用 Cubic 11 開源中文 Pixel 字體 |
+| 🎲 動態隨機需求 | 週期性隨機公式生成（正弦波+趨勢+噪音+衝擊），每局不同 |
+| 🔒 資訊隔離 | 服務器端保證每人只收到自己角色的數據 |
+| ⚡ 實時多人 | WebSocket 同步，支援手機瀏覽器 |
+| 📊 複盤可視化 | 牛鞭效應折線圖 + 需求模式揭曉 |
+| 🏆 排行榜 | 本地最佳紀錄儲存 |
+| 💰 零成本部署 | Vercel + Render 完全免費 |
 
 ---
 
-## 🎯 四个角色
+## 🎭 四個角色
 
-| 角色 | 颜色 | 特色 | 胜利条件 | 优秀门槛 |
+| 角色 | 顏色 | 外觀 | 胜利條件 | 優秀門檻 |
 |------|------|------|---------|---------|
-| 🏪 零售商 | 🔵 蓝 | 蓝围裙店员，直面消费者 | 总成本最低・缺货周数为零 | < $150 |
-| 📦 批发商 | 🟢 绿 | 绿安全帽仓管，手持clipboard | 总成本最低・满足率≥95% | < $200 |
-| 🚛 分销商 | 🟡 黄 | 黄夹克司机，戴墨镜 | 总成本最低・订单波动最小 | < $250 |
-| 🏭 制造商 | 🔴 红 | 红安全帽工程师，拿扳手 | 总成本最低・生产量最稳定 | < $300 |
+| 🏪 零售商 | 🔵 藍 | 藍圍裙店長 | 總成本最低・缺貨週數為零 | < $150 |
+| 📦 批發商 | 🟢 綠 | 綠安全帽倉管 | 總成本最低・滿足率≥95% | < $200 |
+| 🚛 分銷商 | 🟡 黃 | 黃夾克墨鏡司機 | 總成本最低・訂單波動最小 | < $250 |
+| 🏭 製造商 | 🔴 紅 | 紅安全帽鬍子工程師 | 總成本最低・生產量最穩定 | < $300 |
 
-**团队胜利：** 四人总成本之和 < $700
+**團隊勝利：** 四人總成本之和 < $700
 
 ---
 
-## 🎲 动态需求模式
+## 🎲 需求曲線公式
 
-每局开始时随机生成，**游戏结束后才揭露**：
+每局開始時動態生成，遊戲結束前不揭露：
 
-| 模式 | 说明 | 难度 |
+```javascript
+需求[週] = 基礎值
+         + amp1 × sin(2π × t / period1 + phase1)   // 主週期
+         + amp2 × sin(2π × t / period2 + phase2)   // 次諧波
+         + trend × t                                 // 長期趨勢
+         + noise × random()                         // 白噪音
+         + shock_events                             // 0-2個突發衝擊
+```
+
+四種自動識別模式：
+
+| 模式 | 說明 | 難度 |
 |------|------|------|
-| ☀️ 夏季旺季型 | 第 6-14 周进入需求高峰 | ★★☆ |
-| ❄️ 冬季旺季型 | 第 12 周起需求持续走高 | ★★★ |
-| 📈 双峰型 | 两次需求高峰，中间有低谷 | ★★★ |
-| ⚡ 突发冲击型 | 某周需求暴增后迅速回落 | ★★★★ |
+| ☀️ 夏季旺季型 | 中段需求高峰 | ★★☆ |
+| ❄️ 冬季旺季型 | 後段持續走高 | ★★★ |
+| ⚡ 雙重衝擊型 | 兩次突發暴增 | ★★★★ |
+| 💥 突發衝擊型 | 單次需求暴增 | ★★★ |
+| 📈 自然波動型 | 週期性自然波動 | ★★☆ |
 
 ---
 
-## 🕹️ 游戏规则
+## 🕹️ 遊戲規則
 
-- 共 **20 周**，每周 **60 秒**内提交决策
-- 前置时间：下单后 **2 周**到货
-- 持有成本：**$0.50 / 箱 / 周**
-- 缺货成本：**$1.00 / 箱 / 周**
-- 期初库存：**12 箱**，期初在途：**各 4 箱**
-- 所有计算在**后端**进行，前端只负责显示
+- 共 **20 週**，每週 **60 秒** 內提交決策
+- 前置時間：下單後 **2 週** 到貨
+- 持有成本：**$0.50 / 箱 / 週**
+- 缺貨成本：**$1.00 / 箱 / 週**
+- 期初庫存：**12 箱**，期初在途：**各 4 箱**
+- 所有計算在**後端**進行，前端只顯示
 
 ---
 
-## 🏗️ 技术架构
+## 🏗️ 技術架構
 
 ```
-玩家浏览器（手机/电脑）
-        ↕ WebSocket
-┌─────────────────────────────┐
-│  Node.js + Express          │  ← Render 免费托管
-│  Socket.io 实时通信          │
-│  GameEngine.js 纯函数        │
-│  RoomManager.js 内存房间     │
-└─────────────────────────────┘
+玩家瀏覽器（手機 / 電腦）
+        ↕ WebSocket (Socket.io)
+┌─────────────────────────────────┐
+│  Node.js + Express + Socket.io  │  ← Render 免費托管
+│  GameEngine.js  純函數引擎       │
+│  RoomManager.js 記憶體房間管理   │
+│  gameConfig.js  動態需求生成     │
+└─────────────────────────────────┘
 
-React + Vite 前端             ← Vercel 免费托管
-Chart.js 图表
-像素风格 CSS 角色
+React + Vite 前端                  ← Vercel 免費托管
+Cubic 11 中文 Pixel 字體
+Canvas 繪製像素角色
+Chart.js 走勢圖
 ```
 
-### 后端核心档案
+### 後端核心檔案
 
 ```
 server/src/
-├── index.js          # Express + Socket.io 服务器入口
-├── GameEngine.js     # 纯函数游戏引擎（回合结算）
-├── RoomManager.js    # 内存房间管理（Map）
-└── gameConfig.js     # 游戏常数 + 动态需求曲线生成
+├── index.js         # Express + Socket.io 服務器入口
+├── GameEngine.js    # 純函數遊戲引擎（回合結算）
+├── RoomManager.js   # 記憶體房間管理（Map）
+└── gameConfig.js    # 遊戲常數 + 動態需求曲線生成
 ```
 
-### 前端页面
+### 前端頁面
 
 ```
 client/src/
 ├── pages/
-│   ├── Home.jsx      # 输入名字，创建/加入房间
-│   ├── Room.jsx      # 等待室，选择角色
-│   ├── Game.jsx      # 游戏主界面
-│   └── Debrief.jsx   # 复盘页面
+│   ├── Home.jsx     # 輸入名字，創建/加入房間
+│   ├── Room.jsx     # 等待室，選擇角色
+│   ├── Game.jsx     # 遊戲主介面
+│   └── Debrief.jsx  # 複盤頁面
 ├── components/
-│   ├── RoleCard.jsx  # 角色介绍弹窗（含像素角色）
-│   └── GameChart.jsx # Chart.js 图表
-├── roleConfig.js     # 角色配置（文字/颜色/提示）
-└── gameConfig.js     # 游戏常数（与后端同步）
+│   ├── RoleCard.jsx # 角色介紹彈窗（含 Pixel 角色）
+│   └── GameChart.jsx# Chart.js 走勢圖
+├── roleConfig.js    # 角色配置（文字/顏色/提示）
+└── gameConfig.js    # 遊戲常數（與後端同步）
 ```
 
 ### Socket.io 事件
 
-| 客户端 → 服务器 | 说明 |
+| 客戶端 → 服務器 | 說明 |
 |----------------|------|
-| `create_room` | 创建房间 |
-| `join_room` | 加入房间 |
-| `select_role` | 选择角色 |
-| `start_game` | 开始游戏 |
-| `submit_order` | 提交本周决策 |
+| `create_room` | 創建房間 |
+| `join_room` | 加入房間 |
+| `select_role` | 選擇角色 |
+| `start_game` | 開始遊戲 |
+| `submit_order` | 提交本週決策 |
 
-| 服务器 → 客户端 | 说明 |
+| 服務器 → 客戶端 | 說明 |
 |----------------|------|
-| `room_updated` | 等待室状态更新 |
-| `game_started` | 游戏开始（各人收到自己角色数据）|
-| `week_started` | 新回合开始 |
-| `week_results` | 本周结算（只有自己的数据）|
-| `submission_progress` | 提交进度（X/4人）|
-| `game_finished` | 游戏结束，首次公开所有数据 |
+| `room_updated` | 等待室狀態更新 |
+| `game_started` | 遊戲開始 |
+| `week_started` | 新回合開始 |
+| `week_results` | 本週結算（只有自己的數據）|
+| `submission_progress` | 提交進度 |
+| `game_finished` | 遊戲結束，揭露所有數據 |
 
 ---
 
-## 🚀 本地启动
+## 🚀 本地開發
 
-### 环境要求
+### 環境需求
 
 - Node.js v18+
-- npm v9+
 
-### 安装步骤
+### 快速啟動
 
 ```bash
-# 克隆专案
+# 克隆專案
 git clone https://github.com/royhsu1012/beer-game.git
 cd beer-game
 
-# 后端
+# 後端（CMD 視窗 1）
 cd server
-cp .env.example .env    # 复制环境变量
+cp .env.example .env
 npm install
-npm run dev             # 启动在 http://localhost:8080
+npm run dev        # 啟動於 http://localhost:8080
 
-# 前端（另开终端）
+# 前端（CMD 視窗 2）
 cd ../client
-cp .env.example .env    # 复制环境变量
+cp .env.example .env
 npm install
-npm run dev             # 启动在 http://localhost:5173
+npm run dev        # 啟動於 http://localhost:5173
 ```
 
-### 环境变量
+打開瀏覽器：`http://localhost:5173`
+
+### 環境變數
 
 **server/.env**
 ```env
@@ -177,102 +195,121 @@ VITE_SOCKET_URL=http://localhost:8080
 
 ---
 
-## ☁️ 部署上线（完全免费）
+## ☁️ 部署上線（完全免費）
 
-### Step 1：部署后端到 Render
+### 架構圖
 
-1. 去 [render.com](https://render.com) 用 GitHub 登入
-2. **New → Web Service → 选 beer-game repo**
-3. 填写设定：
+```
+玩家手機/電腦
+      ↓
+Vercel（前端） ← yourapp.vercel.app
+      ↓ WebSocket
+Render（後端） ← yourapp.onrender.com
+```
 
-   | 项目 | 值 |
+### Step 1：部署後端到 Render
+
+1. 前往 [render.com](https://render.com) 用 GitHub 登入
+2. **New → Web Service → 選 beer-game repo**
+3. 填寫設定：
+
+   | 項目 | 值 |
    |------|-----|
    | Root Directory | `server` |
    | Build Command | `npm install` |
    | Start Command | `node src/index.js` |
 
-4. 加环境变量：
-   - `CLIENT_ORIGIN` = `https://你的名字.vercel.app`
+4. 新增環境變數：
+   - `CLIENT_ORIGIN` = `https://你的名字.vercel.app`（之後更新）
    - `NODE_ENV` = `production`
 
-5. 部署完成，记下网址：`https://beer-game-xxxx.onrender.com`
+5. 部署完成，記下網址：`https://beer-game-xxxx.onrender.com`
 
 ### Step 2：部署前端到 Vercel
 
-1. 去 [vercel.com](https://vercel.com) 用 GitHub 登入
+1. 前往 [vercel.com](https://vercel.com) 用 GitHub 登入
 2. **New Project → Import beer-game**
-3. 填写设定：
+3. 填寫設定：
 
-   | 项目 | 值 |
+   | 項目 | 值 |
    |------|-----|
    | Root Directory | `client` |
    | Framework | Vite |
 
-4. 加环境变量：
+4. 新增環境變數：
    - `VITE_SOCKET_URL` = `https://beer-game-xxxx.onrender.com`
 
 5. 部署完成，得到：`https://beer-game-xxxx.vercel.app`
 
-### Step 3：互相更新网址
+### Step 3：更新 Render 的 CLIENT_ORIGIN
 
-回到 Render，把 `CLIENT_ORIGIN` 改成 Vercel 给的网址，重新部署。
+回到 Render → Environment → 把 `CLIENT_ORIGIN` 改成 Vercel 網址 → Save。
 
 ### 防止 Render 休眠
 
-免费实例闲置 15 分钟会休眠。去 [uptimerobot.com](https://uptimerobot.com) 设定每 14 分钟 ping：
+免費實例閒置 15 分鐘會休眠。前往 [uptimerobot.com](https://uptimerobot.com) 設定每 14 分鐘 ping：
+
 ```
 https://beer-game-xxxx.onrender.com/health
 ```
 
 ---
 
-## 🔄 更新代码
+## 💰 費用明細
 
-本专案使用 **Claude.ai 直接推送 GitHub**：
-
-- 推送后 Render 和 Vercel 会**自动重新部署**
-- 无需手动操作
-- 可从手机上通过 Claude.ai 对话修改代码
-
----
-
-## 📚 教学目标
-
-游戏结束后，玩家应能理解：
-
-| 概念 | 体验方式 |
-|------|---------|
-| 牛鞭效应的成因 | 亲眼看到自己的订单如何放大上游波动 |
-| 局部最优≠整体最优 | 每人都在「理性」决策，整体供应链却崩溃 |
-| 信息不对称的代价 | 只看到自己数据，无法知道上下游状况 |
-| 前置时间的影响 | 订货 2 周才到，预测难度大增 |
-| 系统思维的重要性 | 复盘揭示全局数据，对比个人视角 |
-
-### 缓解牛鞭效应的现实方案
-
-- **POS 数据共享** — 零售商将销售数据直接共享给上游
-- **VMI（供应商管理库存）** — 由供应商决定补货量
-- **缩短前置时间** — 快速补货能力降低不确定性
-- **CPFR** — 协同规划、预测与补货
-- **EDLP（每日低价）** — 消除价格波动诱因
-
----
-
-## 💰 成本明细
-
-| 服务 | 平台 | 免费额度 | 月费 |
+| 服務 | 平台 | 免費額度 | 月費 |
 |------|------|---------|------|
-| 前端托管 | Vercel | 无限带宽・100GB | $0 |
-| 后端托管 | Render | 512MB RAM・750h/月 | $0 |
-| 域名 | yourapp.vercel.app | 子域名免费 | $0 |
-| **总计** | | | **$0** |
+| 前端托管 | Vercel | 無限帶寬・100GB | $0 |
+| 後端托管 | Render | 512MB RAM・750h/月 | $0 |
+| 網域 | yourapp.vercel.app | 子域名免費 | $0 |
+| **總計** | | | **$0** |
+
+---
+
+## 📚 教學目標
+
+遊戲結束後，玩家應能理解：
+
+| 概念 | 體驗方式 |
+|------|---------|
+| 牛鞭效應的成因 | 親眼看到自己的訂單如何放大上游波動 |
+| 局部最優 ≠ 整體最優 | 每人都在「理性」決策，整體供應鏈卻崩潰 |
+| 資訊不對稱的代價 | 只看到自己數據，無法知道上下游狀況 |
+| 前置時間的影響 | 訂貨 2 週才到，預測難度大增 |
+| 系統思維的重要性 | 複盤揭示全局數據，對比個人視角 |
+
+### 現實中緩解牛鞭效應的方法
+
+- **POS 數據共享** — 零售商直接共享銷售數據給上游
+- **VMI（供應商管理庫存）** — 由供應商決定補貨量
+- **縮短前置時間** — 快速補貨降低不確定性
+- **CPFR** — 協同規劃、預測與補貨
+- **EDLP** — 每日低價，消除價格波動誘因
+
+---
+
+## 🗂️ Demo 單機版
+
+`demo/beer_game_demo.html` — 單一 HTML 檔案，無需安裝，直接瀏覽器打開即可遊玩。
+
+- 單人模式（AI 自動扮演其他三個角色）
+- 完整遊戲流程（選角色 → 遊戲 → 複盤）
+- 包含所有 Pixel Art 效果與中文界面
+
+---
+
+## 🔄 更新代碼
+
+本專案使用 **Claude.ai 直接推送 GitHub**：
+
+推送後 Render 和 Vercel 會**自動重新部署**，無需手動操作。
 
 ---
 
 ## 📄 License
 
-MIT License — 自由使用于教学用途
+MIT License — 自由使用於教學用途
 
 ---
 
-*本专案由 Claude.ai 协助开发 · 供应链教育工具*
+*本專案由 Claude.ai 協助開發 · 供應鏈教育工具 · 2025*
