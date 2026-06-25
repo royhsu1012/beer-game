@@ -103,38 +103,47 @@ function initSocket() {
 
   // 週結算（只收到自己的資料）
   socket.on('week_results', ({ week, mine, consumerDemand }) => {
-    // 更新本地狀態
-    GS.roles[ROLE].inventory = mine.inv
-    GS.roles[ROLE].backlog   = mine.bl
-    GS.roles[ROLE].pipeline  = [0, 0]
-    // 計算本週損益（使用 server 傳回的 hc/sc，加採購成本）
-    const revenue    = mine.sold * SELL_PRICE[ROLE]
-    const procurement = mine.ord * BUY_PRICE[ROLE]
-    const weekProfit = revenue - mine.hc - mine.sc - procurement
-    GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
-    GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
-    GS.week = week + 1
-    // 建立 snap
-    SNAP = { [ROLE]: {
-      wk: week, recv: mine.recv, dem: mine.dem,
-      sold: mine.sold, inv: mine.inv, bl: mine.bl,
-      ord: mine.ord, revenue, hc: mine.hc, sc: mine.sc, weekProfit,
-      profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
-    }}
-    hCash.push(GS.roles[ROLE].cash)
-    hInv.push(mine.inv)
-    hOrd.push(mine.ord)
-    refreshUI()
+    try {
+      GS.roles[ROLE].inventory = mine.inv
+      GS.roles[ROLE].backlog   = mine.bl
+      GS.roles[ROLE].pipeline  = [0, 0]
+      const revenue    = mine.sold * SELL_PRICE[ROLE]
+      const procurement = mine.ord * BUY_PRICE[ROLE]
+      const weekProfit = revenue - mine.hc - mine.sc - procurement
+      GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
+      GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
+      GS.week = week + 1
+      SNAP = { [ROLE]: {
+        wk: week, recv: mine.recv, dem: mine.dem,
+        sold: mine.sold, inv: mine.inv, bl: mine.bl,
+        ord: mine.ord, revenue, hc: mine.hc, sc: mine.sc, weekProfit,
+        profit: GS.roles[ROLE].profit, cash: GS.roles[ROLE].cash
+      }}
+      hCash.push(GS.roles[ROLE].cash)
+      hInv.push(mine.inv)
+      hOrd.push(mine.ord)
+      refreshUI()
+    } catch(e) {
+      document.getElementById('g-wait').innerHTML =
+        `<div class="pbox" style="padding:12px;color:var(--red)">week_results 錯誤: ${e.message}</div>`
+    }
   })
 
   // 下週開始
   socket.on('week_started', ({ week, inventory, backlog, pipeline0, pipeline1 }) => {
-    GS.roles[ROLE].inventory = inventory
-    GS.roles[ROLE].backlog   = backlog
-    GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
-    GS.week = week
-    refreshUI()
-    startTimer()
+    try {
+      GS.roles[ROLE].inventory = inventory
+      GS.roles[ROLE].backlog   = backlog
+      GS.roles[ROLE].pipeline  = [pipeline0, pipeline1]
+      GS.week = week
+      document.getElementById('g-wait').style.display = 'none'
+      document.getElementById('g-az').style.display = 'block'
+      refreshUI()
+      startTimer()
+    } catch(e) {
+      document.getElementById('g-wait').innerHTML =
+        `<div class="pbox" style="padding:12px;color:var(--red)">week_started 錯誤: ${e.message}</div>`
+    }
   })
 
   // 遊戲結束
