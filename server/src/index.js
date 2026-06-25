@@ -1,7 +1,7 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { createRoom, getRoom, addPlayer, removePlayer, selectRole, startGame, submitOrder, findPlayerRoom } = require('./RoomManager')
+const { createRoom, getRoom, addPlayer, removePlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom } = require('./RoomManager')
 const { processWeek, calculateResults } = require('./GameEngine')
 const { ROUND_TIME_SECONDS, ROLES } = require('./gameConfig')
 
@@ -25,9 +25,21 @@ function broadcastRoom(roomCode) {
   const room = getRoom(roomCode)
   if (!room) return
   io.to(roomCode).emit('room_updated', {
-    players: room.players.map(p => ({ name: p.name, role: p.role })),
+    players: room.players.map(p => ({ name: p.name, role: p.role, isBot: p.isBot || false })),
     status: room.status
   })
+}
+
+function calcBotOrder(roleState) {
+  const history = roleState.weeklyHistory
+  const recentDemands = history.slice(-3).map(h => h.dem)
+  const avgDemand = recentDemands.length > 0
+    ? recentDemands.reduce((a, b) => a + b, 0) / recentDemands.length
+    : 4
+  const inTransit = roleState.pipeline[0] + roleState.pipeline[1]
+  const suggested = Math.round(avgDemand * 1.5) - roleState.inventory - inTransit + roleState.backlog
+  const noise = Math.floor(Math.random() * 5) - 2  // -2 ~ +2
+  return Math.max(0, suggested + noise)
 }
 
 function getLastOrder(room, role) {
@@ -39,8 +51,15 @@ function resolveWeek(roomCode) {
   const room = getRoom(roomCode)
   if (!room || room.status !== 'playing') return
 
-  // Auto-fill missing orders with last week's order
-  const playerRoles = room.players.map(p => p.role)
+  // Bot players: calculate order from suggestion formula
+  for (const player of room.players.filter(p => p.isBot)) {
+    if (room.gameState.pendingOrders[player.role] === undefined) {
+      room.gameState.pendingOrders[player.role] = calcBotOrder(room.gameState.roles[player.role])
+    }
+  }
+
+  // Auto-fill missing orders (disconnected humans) with last week's order
+  const playerRoles = room.players.filter(p => !p.isBot).map(p => p.role)
   for (const role of playerRoles) {
     if (room.gameState.pendingOrders[role] === undefined) {
       room.gameState.pendingOrders[role] = getLastOrder(room, role)
@@ -56,8 +75,8 @@ function resolveWeek(roomCode) {
   const { newState, weekSnapshot, consumerDemand } = processWeek(room.gameState, room.gameState.pendingOrders)
   room.gameState = newState
 
-  // Send each player only their own data
-  room.players.forEach(player => {
+  // Send each human player only their own data
+  room.players.filter(p => !p.isBot).forEach(player => {
     io.to(player.socketId).emit('week_results', {
       week: weekSnapshot[player.role].wk,
       mine: weekSnapshot[player.role],
@@ -74,8 +93,8 @@ function resolveWeek(roomCode) {
     return
   }
 
-  // Start next week
-  room.players.forEach(player => {
+  // Start next week (human players only)
+  room.players.filter(p => !p.isBot).forEach(player => {
     const roleState = newState.roles[player.role]
     io.to(player.socketId).emit('week_started', {
       week: newState.week,
@@ -117,6 +136,20 @@ io.on('connection', (socket) => {
     broadcastRoom(code)
   })
 
+  socket.on('add_bot', ({ roomCode, role }, cb) => {
+    const result = addBot(roomCode.toUpperCase(), role)
+    if (result.error) return cb({ error: result.error })
+    cb({ ok: true })
+    broadcastRoom(roomCode.toUpperCase())
+  })
+
+  socket.on('remove_bot', ({ roomCode, role }, cb) => {
+    const result = removeBot(roomCode.toUpperCase(), role)
+    if (result.error) return cb({ error: result.error })
+    cb({ ok: true })
+    broadcastRoom(roomCode.toUpperCase())
+  })
+
   socket.on('select_role', ({ roomCode, role }, cb) => {
     const result = selectRole(roomCode.toUpperCase(), socket.id, role)
     if (result.error) return cb({ error: result.error })
@@ -129,7 +162,7 @@ io.on('connection', (socket) => {
     const result = startGame(code)
     if (result.error) return cb({ error: result.error })
     const room = result.room
-    room.players.forEach(player => {
+    room.players.filter(p => !p.isBot).forEach(player => {
       const roleState = room.gameState.roles[player.role]
       io.to(player.socketId).emit('game_started', {
         role: player.role,

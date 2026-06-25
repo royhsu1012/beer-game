@@ -46,9 +46,32 @@ function selectRole(code, socketId, role) {
   return { ok: true, room }
 }
 
+function addBot(code, role) {
+  const room = getRoom(code)
+  if (!room) return { error: 'ROOM_NOT_FOUND' }
+  if (room.status !== 'waiting') return { error: 'GAME_ALREADY_STARTED' }
+  if (!ROLES.includes(role)) return { error: 'INVALID_ROLE' }
+  if (room.players.find(p => p.role === role)) return { error: 'ROLE_TAKEN' }
+  if (room.players.length >= 4) return { error: 'ROOM_FULL' }
+  room.players.push({ socketId: null, name: '電腦', role, isBot: true })
+  return { ok: true, room }
+}
+
+function removeBot(code, role) {
+  const room = getRoom(code)
+  if (!room) return { error: 'ROOM_NOT_FOUND' }
+  if (room.status !== 'waiting') return { error: 'GAME_ALREADY_STARTED' }
+  const idx = room.players.findIndex(p => p.role === role && p.isBot)
+  if (idx === -1) return { error: 'BOT_NOT_FOUND' }
+  room.players.splice(idx, 1)
+  return { ok: true, room }
+}
+
 function startGame(code) {
   const room = getRoom(code)
   if (!room) return { error: 'ROOM_NOT_FOUND' }
+  const humans = room.players.filter(p => !p.isBot)
+  if (humans.length < 1) return { error: 'NOT_ENOUGH_PLAYERS' }
   if (room.players.length < 2) return { error: 'NOT_ENOUGH_PLAYERS' }
   const assigned = room.players.filter(p => p.role !== null)
   if (assigned.length !== room.players.length) return { error: 'NOT_ALL_ROLES_ASSIGNED' }
@@ -63,10 +86,10 @@ function submitOrder(code, role, quantity) {
   if (room.gameState.pendingOrders[role] !== undefined) return { error: 'ALREADY_SUBMITTED' }
   if (!Number.isInteger(quantity) || quantity < 0) return { error: 'INVALID_QUANTITY' }
   room.gameState.pendingOrders[role] = quantity
-  const submittedCount = Object.keys(room.gameState.pendingOrders).length
-  const playerRoles = room.players.map(p => p.role)
-  const allSubmitted = playerRoles.every(r => room.gameState.pendingOrders[r] !== undefined)
-  return { ok: true, submittedCount, allSubmitted, totalPlayers: room.players.length }
+  const humanRoles = room.players.filter(p => !p.isBot).map(p => p.role)
+  const submittedCount = humanRoles.filter(r => room.gameState.pendingOrders[r] !== undefined).length
+  const allSubmitted = humanRoles.every(r => room.gameState.pendingOrders[r] !== undefined)
+  return { ok: true, submittedCount, allSubmitted, totalPlayers: humanRoles.length }
 }
 
 function findPlayerRoom(socketId) {
@@ -77,4 +100,4 @@ function findPlayerRoom(socketId) {
   return null
 }
 
-module.exports = { createRoom, getRoom, addPlayer, removePlayer, selectRole, startGame, submitOrder, findPlayerRoom }
+module.exports = { createRoom, getRoom, addPlayer, removePlayer, selectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom }
