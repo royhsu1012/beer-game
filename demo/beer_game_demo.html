@@ -4,59 +4,81 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>🍺 啤酒供應鏈遊戲</title>
+<!--
+  字型說明：
+  - Cubic 11：開源像素中文字體（支援繁體中文）
+  - Noto Color Emoji：Google 全彩 emoji（取代系統 emoji）
+  - 俐方體11號：台灣商業字型，無免費 CDN，使用 Cubic 11 替代
+-->
 <style>
 @font-face {
   font-family: 'Cubic11';
   src: url('https://cdn.jsdelivr.net/gh/ACh-K/Cubic-11@main/Cubic_11_1.013_R.woff2') format('woff2');
   font-display: swap;
 }
+
+/* Google Noto Color Emoji — 讓 emoji 全部顯示為彩色 */
+@font-face {
+  font-family: 'NotoEmoji';
+  src: url('https://cdn.jsdelivr.net/npm/noto-emoji@2.034/fonts/NotoColorEmoji.ttf') format('truetype');
+  font-display: swap;
+}
+
 :root{
   --ink:#06040f; --paper:#120c1e; --panel:#0e0a18;
-  --b1:#3d2b7a; --b2:#6b46c1; --b3:#a78bfa;
+  --b1:#3d2b7a; --b2:#6b46c1;
   --c0:#ede9fe; --c1:#a78bfa; --c2:#6d5a9c;
   --blue:#38bdf8; --grn:#4ade80; --yel:#fde047;
   --red:#f87171; --pur:#c084fc; --gold:#fbbf24;
-  --profit:#4ade80; --loss:#f87171;
 }
+
 *{box-sizing:border-box;margin:0;padding:0;image-rendering:pixelated}
+
 body{
-  background:var(--ink);color:var(--c0);
-  font-family:'Cubic11','DFKai-SB','Microsoft JhengHei',monospace;
-  font-size:14px;line-height:1.5;
-  min-height:100vh;max-width:420px;margin:0 auto;
+  background:var(--ink);
+  color:var(--c0);
+  /* 字型堆疊：像素中文 → 系統中文 → emoji */
+  font-family:'Cubic11','DFKai-SB','Microsoft JhengHei',sans-serif;
+  font-size:14px;
+  line-height:1.5;
+  min-height:100vh;
+  max-width:420px;
+  margin:0 auto;
 }
-body::before{
-  content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;
-  background:repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px);
+
+/* Emoji 統一用 Noto Color Emoji */
+.emoji {
+  font-family:'NotoEmoji','Apple Color Emoji','Segoe UI Emoji',sans-serif;
+  font-size:1.2em;
+  line-height:1;
+  display:inline-block;
+  vertical-align:middle;
 }
-body::after{
-  content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
-  background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.6) 100%);
-}
+
+/* CRT 效果 */
+body::before{content:'';position:fixed;inset:0;z-index:9998;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,0,0,.1) 2px,rgba(0,0,0,.1) 4px)}
+body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
+  background:radial-gradient(ellipse at 50% 50%,transparent 55%,rgba(0,0,0,.6) 100%)}
+
 .screen{display:none;min-height:100vh}.screen.on{display:block}
 
+/* 像素框 */
 .pbox{
   background:var(--panel);border:2px solid var(--b2);
-  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,inset 0 0 0 1px rgba(163,139,250,.1);
+  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,inset 0 0 0 1px rgba(163,139,250,.08);
 }
-.pbox-profit{
-  border-color:var(--grn);
-  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 20px rgba(74,222,128,.25),inset 0 0 0 1px rgba(74,222,128,.15);
-}
-.pbox-gold{
-  border-color:var(--gold);
-  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 16px rgba(251,191,36,.2);
-}
-.pbox-loss{
-  border-color:var(--red);
-  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 12px rgba(248,113,113,.2);
-}
+.pbox-grn{border-color:var(--grn);
+  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 20px rgba(74,222,128,.25)}
+.pbox-gold{border-color:var(--gold);
+  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 16px rgba(251,191,36,.2)}
+.pbox-red{border-color:var(--red);
+  box-shadow:0 0 0 1px var(--ink),4px 4px 0 #000,0 0 16px rgba(248,113,113,.2)}
 
-.pbtn{
-  font-family:inherit;font-size:14px;padding:8px 14px;border:2px solid;
+/* 按鈕 */
+.pbtn{font-family:inherit;font-size:14px;padding:8px 14px;border:2px solid;
   background:var(--panel);cursor:pointer;box-shadow:3px 3px 0 #000;
-  display:inline-block;transition:filter .05s;position:relative;
-}
+  display:inline-block;transition:filter .05s}
 .pbtn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
 .pbtn:hover{filter:brightness(1.2)}
 .pbtn-g{color:var(--grn);border-color:var(--grn)}
@@ -64,53 +86,62 @@ body::after{
 .pbtn-y{color:var(--yel);border-color:var(--yel)}
 .pbtn-r{color:var(--red);border-color:var(--red)}
 
-.pinput{
-  font-family:inherit;font-size:20px;background:#000;color:var(--grn);
+/* 輸入 */
+.pinput{font-family:inherit;font-size:20px;background:#000;color:var(--grn);
   border:2px solid var(--grn);padding:10px 14px;width:100%;outline:none;
-  text-align:center;box-shadow:inset 2px 2px 0 #001500,3px 3px 0 #000;
-  caret-color:var(--grn);
-}
-.pinput:focus{border-color:var(--blue);box-shadow:inset 2px 2px 0 #000c24,3px 3px 0 #000}
+  text-align:center;box-shadow:inset 2px 2px 0 #001500,3px 3px 0 #000;caret-color:var(--grn)}
+.pinput:focus{border-color:var(--blue)}
 
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
 @keyframes glow{0%,100%{text-shadow:0 0 6px currentColor}50%{text-shadow:0 0 20px currentColor,0 0 40px currentColor}}
 @keyframes slidein{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
-@keyframes countup{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
-@keyframes coinbounce{0%{transform:translateY(-20px);opacity:0}60%{transform:translateY(4px)}80%{transform:translateY(-2px)}100%{transform:translateY(0);opacity:1}}
+@keyframes coinpop{0%{transform:scale(0.5) translateY(-10px);opacity:0}60%{transform:scale(1.1) translateY(2px)}100%{transform:scale(1) translateY(0);opacity:1}}
 
 .float{animation:float 2s ease-in-out infinite}
 .blink{animation:blink 1s step-end infinite}
 .glow{animation:glow 2.5s ease-in-out infinite}
 .slidein{animation:slidein .2s ease-out}
-.coinbounce{animation:coinbounce .5s ease-out}
+.coinpop{animation:coinpop .4s ease-out}
 
 .prog{background:#000;border:2px solid var(--b1);height:14px;overflow:hidden}
 .prog-fill{height:100%;background:repeating-linear-gradient(90deg,var(--grn) 0,var(--grn) 4px,#002200 4px,#002200 8px);transition:width .15s steps(10)}
 
-.pchart{display:flex;align-items:flex-end;gap:2px;background:#000;border:2px solid var(--b1);padding:4px 4px 0;height:56px;position:relative}
-.pchart::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0,transparent 13px,rgba(255,255,255,.04) 13px,rgba(255,255,255,.04) 14px);pointer-events:none}
+.pchart{display:flex;align-items:flex-end;gap:2px;background:#000;border:2px solid var(--b1);
+  padding:4px 4px 0;height:56px;position:relative}
+.pchart::before{content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0,transparent 13px,rgba(255,255,255,.04) 13px,rgba(255,255,255,.04) 14px);pointer-events:none}
 .pbar{flex:1;min-width:3px}
 
-.hud{background:#000;border-bottom:2px solid var(--b2);padding:8px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:200;box-shadow:0 4px 0 #000}
+.hud{background:#000;border-bottom:2px solid var(--b2);padding:8px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;box-shadow:0 4px 0 #000}
 
-/* 利潤顯示區 — 最重要的 UI 元素 */
-.profit-display{
-  background:#000;border:3px solid var(--grn);
-  box-shadow:4px 4px 0 #000,0 0 30px rgba(74,222,128,.35),inset 0 0 0 1px rgba(74,222,128,.2);
-  padding:16px;text-align:center;
-}
-.profit-negative{
-  border-color:var(--red);
-  box-shadow:4px 4px 0 #000,0 0 20px rgba(248,113,113,.3),inset 0 0 0 1px rgba(248,113,113,.15);
-}
+.az{background:#040f04;border:3px solid var(--grn);
+  box-shadow:4px 4px 0 #000,0 0 24px rgba(74,222,128,.3),inset 0 0 0 1px rgba(74,222,128,.12);padding:14px}
 
-.az{background:#040f04;border:3px solid var(--grn);box-shadow:4px 4px 0 #000,0 0 24px rgba(74,222,128,.3),inset 0 0 0 1px rgba(74,222,128,.15);padding:14px}
-.hint{border-left:4px solid var(--yel);background:#0d0900;padding:10px 12px;font-size:13px;color:var(--yel);line-height:1.7;box-shadow:3px 3px 0 #000}
+.hint{border-left:4px solid var(--yel);background:#0d0900;
+  padding:10px 12px;font-size:13px;color:var(--yel);line-height:1.7;box-shadow:3px 3px 0 #000}
+
 .pdiv{height:2px;background:repeating-linear-gradient(90deg,var(--b1) 0,var(--b1) 4px,transparent 4px,transparent 8px);margin:12px 0}
+
 .tile{padding:10px 8px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tile-val{font-size:24px;line-height:1}
 .tile-lab{font-size:11px;color:var(--c2)}
+
+/* 帳戶餘額大顯示 */
+.cash-panel{
+  background:#000;border:3px solid var(--grn);
+  box-shadow:4px 4px 0 #000,0 0 30px rgba(74,222,128,.35);
+  padding:14px;text-align:center;
+}
+.cash-panel.loss{border-color:var(--red);box-shadow:4px 4px 0 #000,0 0 20px rgba(248,113,113,.3)}
+
+/* 供應鏈層級顏色 */
+.role-retailer   {color:var(--blue)}
+.role-wholesaler {color:var(--grn)}
+.role-distributor{color:var(--yel)}
+.role-manufacturer{color:var(--red)}
 </style>
 </head>
 <body>
@@ -124,22 +155,31 @@ body::after{
     <div style="font-size:24px;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
     <div class="pdiv" style="margin:12px 0 10px"></div>
     <div style="font-size:13px;color:var(--c1);line-height:1.9">
-      你是一家公司的老闆。<br>
-      <b style="color:var(--grn)">賣出越多 = 賺越多</b>，<br>
-      但囤太多貨或缺貨都會<b style="color:var(--red)">虧錢</b>。
+      你是供應鏈上的一家公司老闆。<br>
+      <span class="emoji">💰</span> 賣出越多賺越多，<br>
+      但囤貨和缺貨都會虧錢！
     </div>
   </div>
 
-  <!-- 利潤公式卡 -->
-  <div class="pbox pbox-profit" style="padding:14px;margin-bottom:14px">
-    <div style="font-size:14px;color:var(--grn);margin-bottom:10px">💰 你的利潤計算方式</div>
-    <div style="font-size:13px;line-height:2.2">
-      <div>🏦 起始資金 <b style="color:var(--gold)">$200</b></div>
-      <div>📦 每賣出 1 箱 <b style="color:var(--grn)">+$2.00</b> 進帳</div>
-      <div>🏭 每箱庫存每週 <b style="color:var(--red)">−$0.50</b> 扣除</div>
-      <div>💔 每箱缺貨每週 <b style="color:var(--red)">−$1.00</b> 扣除</div>
-      <div class="pdiv" style="margin:8px 0"></div>
-      <div style="color:var(--gold)">目標：讓帳戶餘額最大化！</div>
+  <!-- 利潤公式 -->
+  <div class="pbox pbox-grn" style="padding:14px;margin-bottom:14px">
+    <div style="font-size:14px;color:var(--grn);margin-bottom:10px">
+      <span class="emoji">💰</span> 你的帳戶怎麼算？
+    </div>
+    <div style="font-size:13px;line-height:2.3">
+      <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px">$200</b></div>
+      <div><span class="emoji">📦</span> 每賣出 1 箱 進帳 <b style="color:var(--grn)">+$賣價</b></div>
+      <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">−$0.10</b></div>
+      <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">−$0.50</b></div>
+    </div>
+    <div class="pdiv" style="margin:8px 0"></div>
+    <!-- 各角色售價 -->
+    <div style="font-size:12px;color:var(--c2);margin-bottom:6px">各角色賣價（越近消費者越高）：</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:13px">
+      <div><span class="emoji">🏪</span> 零售商 <b style="color:var(--blue)">$3.00/箱</b></div>
+      <div><span class="emoji">📦</span> 批發商 <b style="color:var(--grn)">$2.00/箱</b></div>
+      <div><span class="emoji">🚛</span> 分銷商 <b style="color:var(--yel)">$1.40/箱</b></div>
+      <div><span class="emoji">🏭</span> 製造商 <b style="color:var(--red)">$1.00/箱</b></div>
     </div>
   </div>
 
@@ -151,18 +191,22 @@ body::after{
 
   <!-- 規則 -->
   <div class="pbox" style="padding:14px;margin-bottom:14px">
-    <div style="font-size:14px;color:var(--pur);margin-bottom:10px">📖 基本規則</div>
+    <div style="font-size:14px;color:var(--pur);margin-bottom:10px">
+      <span class="emoji">📖</span> 基本規則
+    </div>
     <div style="font-size:13px;color:var(--c1);line-height:2.1">
-      <div>⏱ 共 <b style="color:var(--c0)">20</b> 週，每週 <b style="color:var(--c0)">60</b> 秒決策</div>
-      <div>📦 下單後 <b style="color:var(--c0)">2</b> 週才到貨</div>
-      <div>🔒 你只能看到自己的數據</div>
-      <div>🎲 每局需求不同，遊戲後揭曉</div>
+      <div><span class="emoji">⏱️</span> 共 <b style="color:var(--c0)">20</b> 週，每週 <b style="color:var(--c0)">60</b> 秒決策</div>
+      <div><span class="emoji">📦</span> 下單後 <b style="color:var(--c0)">2</b> 週才到貨</div>
+      <div><span class="emoji">🔒</span> 你只能看到自己的數據</div>
+      <div><span class="emoji">🎲</span> 每局需求隨機，遊戲後揭曉</div>
     </div>
   </div>
 
   <!-- 最高紀錄 -->
   <div class="pbox" style="padding:14px">
-    <div style="font-size:14px;color:var(--gold);margin-bottom:10px">🏆 最高利潤紀錄</div>
+    <div style="font-size:14px;color:var(--gold);margin-bottom:10px">
+      <span class="emoji">🏆</span> 最高帳戶紀錄
+    </div>
     <div id="hiscore" style="font-size:13px;color:var(--c2);line-height:2.2">尚無紀錄</div>
   </div>
 
@@ -181,33 +225,42 @@ body::after{
     <div id="rc-title" style="font-size:12px;color:var(--c2);line-height:1.7"></div>
   </div>
 
-  <!-- 利潤目標卡 — 最重要 -->
-  <div id="rc-profit-card" class="pbox pbox-profit" style="padding:16px;margin-bottom:12px;text-align:center">
-    <div style="font-size:13px;color:var(--c2);margin-bottom:6px">🎯 你的目標</div>
-    <div style="font-size:18px;color:var(--grn);margin-bottom:8px">讓你的利潤最大化！</div>
+  <!-- 帳戶目標 -->
+  <div id="rc-goal-card" class="pbox pbox-grn" style="padding:16px;margin-bottom:12px">
+    <div style="font-size:12px;color:var(--c2);margin-bottom:6px">
+      <span class="emoji">🎯</span> 你的目標
+    </div>
+    <div style="font-size:14px;color:var(--grn);margin-bottom:8px">讓帳戶餘額盡量高！</div>
     <div id="rc-target" style="font-size:13px;color:var(--gold);line-height:1.8"></div>
   </div>
 
-  <!-- 你的業務 -->
+  <!-- 業務說明 -->
   <div class="pbox" style="padding:14px;margin-bottom:12px">
-    <div style="font-size:13px;color:var(--pur);margin-bottom:8px">🏢 你的業務</div>
+    <div style="font-size:13px;color:var(--pur);margin-bottom:8px">
+      <span class="emoji">🏢</span> 你的業務
+    </div>
     <div id="rc-mission" style="font-size:13px;color:var(--c1);line-height:1.9"></div>
   </div>
 
-  <!-- 看得到/看不到 -->
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
     <div class="pbox" style="padding:12px">
-      <div style="font-size:12px;color:var(--grn);margin-bottom:6px">✅ 你知道</div>
+      <div style="font-size:12px;color:var(--grn);margin-bottom:6px">
+        <span class="emoji">✅</span> 你知道
+      </div>
       <div id="rc-see" style="font-size:12px;color:var(--c1);line-height:2"></div>
     </div>
     <div class="pbox" style="padding:12px">
-      <div style="font-size:12px;color:var(--red);margin-bottom:6px">❌ 你不知道</div>
+      <div style="font-size:12px;color:var(--red);margin-bottom:6px">
+        <span class="emoji">❌</span> 你不知道
+      </div>
       <div id="rc-blind" style="font-size:12px;color:var(--c1);line-height:2"></div>
     </div>
   </div>
 
   <div class="hint" style="margin-bottom:14px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:4px">💡 賺錢關鍵</div>
+    <div style="font-size:13px;font-weight:700;margin-bottom:4px">
+      <span class="emoji">💡</span> 賺錢關鍵
+    </div>
     <div id="rc-tip" style="font-size:13px"></div>
   </div>
 
@@ -231,10 +284,9 @@ body::after{
       <div id="hud-timer" style="font-size:28px;color:var(--gold);line-height:1" class="blink">60</div>
       <div style="font-size:11px;color:var(--c2)">秒</div>
     </div>
-    <!-- 利潤顯示在 HUD 右側，最重要的數字 -->
     <div style="text-align:right">
       <div style="font-size:11px;color:var(--c2)">帳戶餘額</div>
-      <div id="hud-profit" style="font-size:18px;font-weight:900;color:var(--grn)">$200</div>
+      <div id="hud-cash" style="font-size:18px;font-weight:900;color:var(--grn)">$200</div>
     </div>
   </div>
 
@@ -244,25 +296,29 @@ body::after{
       <div id="g-prog" class="prog-fill" style="width:100%"></div>
     </div>
 
-    <!-- ★ 利潤儀表板 — 最重要的區塊 ★ -->
-    <div id="g-profit-dash" class="profit-display pbox" style="margin-bottom:10px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <div style="font-size:12px;color:var(--c2)">💰 帳戶餘額</div>
-        <div style="font-size:11px;color:var(--c2)">本週 <span id="g-week-profit" style="font-size:13px">—</span></div>
+    <!-- ★ 帳戶餘額儀表板 ★ -->
+    <div id="g-cash-panel" class="cash-panel" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:12px;color:var(--c2)">
+          <span class="emoji">💰</span> 帳戶餘額
+        </div>
+        <div style="font-size:12px;color:var(--c2)">
+          本週 <span id="g-week-profit" style="font-size:13px;color:var(--grn)">—</span>
+        </div>
       </div>
-      <div id="g-cash-display" style="font-size:40px;color:var(--grn);line-height:1">$200</div>
-      <div style="display:flex;justify-content:center;gap:20px;margin-top:8px;font-size:12px">
-        <span style="color:var(--c2)">收入 <span id="g-revenue" style="color:var(--grn)">$0</span></span>
-        <span style="color:var(--c2)">庫存費 <span id="g-hc" style="color:var(--red)">$0</span></span>
-        <span style="color:var(--c2)">缺貨罰 <span id="g-sc" style="color:var(--red)">$0</span></span>
+      <div id="g-cash-big" style="font-size:42px;color:var(--grn);line-height:1;margin-bottom:8px" class="coinpop">$200</div>
+      <div style="display:flex;justify-content:center;gap:16px;font-size:12px">
+        <span style="color:var(--c2)">賣出 <span id="g-revenue" style="color:var(--grn)">—</span></span>
+        <span style="color:var(--c2)">庫存費 <span id="g-hc" style="color:var(--red)">—</span></span>
+        <span style="color:var(--c2)">缺貨罰 <span id="g-sc" style="color:var(--red)">—</span></span>
       </div>
     </div>
 
-    <!-- 角色 + 狀態數字 -->
+    <!-- 角色 + 狀態 -->
     <div style="display:grid;grid-template-columns:64px 1fr;gap:10px;margin-bottom:10px">
       <div class="pbox tile">
         <canvas id="g-spr" width="40" height="48" style="width:40px;height:48px" class="float"></canvas>
-        <div id="g-rank-badge" style="font-size:12px;color:var(--gold);margin-top:4px">$0</div>
+        <div id="g-sell-badge" style="font-size:11px;color:var(--gold);margin-top:4px">$3/箱</div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
         <div class="pbox tile">
@@ -283,28 +339,30 @@ body::after{
       </div>
     </div>
 
-    <!-- 次要資訊 -->
+    <!-- 次要狀態 -->
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:10px">
       <div class="pbox" style="padding:8px;text-align:center">
-        <div class="tile-lab">到貨</div>
-        <div id="g-recv" style="font-size:16px;color:var(--blue)">— 箱</div>
+        <div class="tile-lab"><span class="emoji">📬</span> 到貨</div>
+        <div id="g-recv" style="font-size:16px;color:var(--blue)">—</div>
+        <div class="tile-lab">箱</div>
       </div>
       <div class="pbox" style="padding:8px;text-align:center">
-        <div class="tile-lab">積壓</div>
-        <div id="g-back" style="font-size:16px;color:var(--red)">0 箱</div>
+        <div class="tile-lab"><span class="emoji">⚠️</span> 積壓</div>
+        <div id="g-back" style="font-size:16px;color:var(--red)">0</div>
+        <div class="tile-lab">箱</div>
       </div>
       <div class="pbox" style="padding:8px;text-align:center">
-        <div class="tile-lab">在途</div>
-        <div id="g-pipe" style="font-size:16px;color:var(--pur)">8 箱</div>
+        <div class="tile-lab"><span class="emoji">🚚</span> 在途</div>
+        <div id="g-pipe" style="font-size:16px;color:var(--pur)">8</div>
+        <div class="tile-lab">箱</div>
       </div>
     </div>
 
-    <!-- ★ 下單動作區 ★ -->
+    <!-- ★ 動作區 ★ -->
     <div id="g-az" class="az slidein" style="margin-bottom:10px">
       <div style="font-size:12px;color:var(--grn);margin-bottom:4px">[ 本週決策 ]</div>
-      <div id="g-azq" style="font-size:15px;color:var(--c0);margin-bottom:8px">你要訂多少箱？</div>
-      <!-- 決策提示 -->
-      <div id="g-decision-hint" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.7"></div>
+      <div id="g-azq" style="font-size:15px;color:var(--c0);margin-bottom:6px">你要訂多少箱？</div>
+      <div id="g-decision-ctx" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.7;min-height:2em"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <input type="number" min="0" id="g-input" class="pinput" placeholder="輸入數量" style="flex:1"/>
         <button class="pbtn pbtn-g" onclick="submitOrder()" style="font-size:15px;padding:10px 16px">確認</button>
@@ -314,7 +372,9 @@ body::after{
 
     <div id="g-wait" style="display:none;margin-bottom:10px">
       <div class="pbox" style="padding:16px;text-align:center">
-        <div style="font-size:15px;color:var(--grn)">✅ 已提交 <span id="g-sub-n">0</span> 箱</div>
+        <div style="font-size:15px;color:var(--grn)">
+          <span class="emoji">✅</span> 已提交 <span id="g-sub-n">0</span> 箱
+        </div>
         <div style="font-size:12px;color:var(--c2);margin-top:6px">計算中...</div>
       </div>
     </div>
@@ -323,14 +383,16 @@ body::after{
       <div id="g-hinttext"></div>
     </div>
 
-    <!-- 利潤走勢圖 -->
+    <!-- 走勢圖 -->
     <div class="pdiv"></div>
-    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">📈 利潤走勢</div>
+    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">
+      <span class="emoji">📈</span> 走勢圖
+    </div>
     <div>
       <div style="font-size:12px;color:var(--c2);margin-bottom:3px">
-        帳戶餘額 <span id="cn-profit" style="color:var(--grn)"></span>
+        帳戶餘額 <span id="cn-cash" style="color:var(--grn)"></span>
       </div>
-      <div class="pchart" id="ch-profit" style="height:48px"></div>
+      <div class="pchart" id="ch-cash" style="height:48px"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
       <div>
@@ -355,67 +417,77 @@ body::after{
     <div style="font-size:26px;color:var(--gold)" class="glow">遊戲結束！</div>
   </div>
 
-  <!-- 你的最終利潤 — 最大最重要 -->
+  <!-- 你的最終帳戶 -->
   <div id="db-my" class="pbox" style="padding:20px;text-align:center;margin-bottom:14px">
-    <div style="font-size:13px;color:var(--c2);margin-bottom:6px">你（<span id="db-myrole" style="color:var(--grn)"></span>）的最終利潤</div>
-    <div id="db-profit" style="font-size:42px;line-height:1;margin-bottom:4px">$200</div>
-    <div style="font-size:12px;color:var(--c2);margin-bottom:8px">起始 $200 → 最終帳戶餘額</div>
+    <div style="font-size:12px;color:var(--c2);margin-bottom:4px">
+      你（<span id="db-myrole" style="color:var(--grn)"></span>）的最終帳戶
+    </div>
+    <div id="db-cash" style="font-size:48px;line-height:1;margin-bottom:4px">$200</div>
+    <div style="font-size:13px;color:var(--c2);margin-bottom:8px">
+      起始 $200 → <span id="db-change" style="font-weight:700">±$0</span>
+    </div>
     <div id="db-verdict" style="font-size:16px"></div>
-    <div style="font-size:12px;color:var(--c2);margin-top:8px" id="db-breakdown"></div>
+    <div id="db-breakdown" style="font-size:12px;color:var(--c2);margin-top:8px;line-height:1.8"></div>
   </div>
 
   <!-- 需求揭曉 -->
   <div class="pbox pbox-gold" style="padding:14px;margin-bottom:14px">
-    <div style="font-size:12px;color:var(--c2);margin-bottom:6px">🎲 本局需求模式（現在才揭曉！）</div>
+    <div style="font-size:12px;color:var(--c2);margin-bottom:6px">
+      <span class="emoji">🎲</span> 本局需求模式（現在才揭曉！）
+    </div>
     <div id="db-mode" style="font-size:17px;color:var(--yel)"></div>
     <div id="db-mode-desc" style="font-size:12px;color:var(--c1);margin-top:6px;line-height:1.7"></div>
     <div style="font-size:12px;color:var(--c2);margin:10px 0 4px">消費者實際需求曲線</div>
     <div class="pchart" id="db-demand-chart" style="height:50px"></div>
   </div>
 
-  <!-- 四角色利潤排名 -->
-  <div style="font-size:13px;color:var(--c2);margin-bottom:8px">💰 各公司最終帳戶餘額（起始 $200）</div>
+  <!-- 各角色帳戶排名 -->
+  <div style="font-size:13px;color:var(--c2);margin-bottom:8px">
+    <span class="emoji">🏆</span> 各公司最終帳戶排名（起始 $200）
+  </div>
   <div id="db-rank" style="margin-bottom:14px"></div>
 
-  <!-- 牛鞭效應圖 -->
+  <!-- 牛鞭效應 -->
   <div class="pbox" style="padding:14px;margin-bottom:14px">
-    <div style="font-size:15px;color:var(--pur);margin-bottom:6px">🌀 牛鞭效應</div>
+    <div style="font-size:15px;color:var(--pur);margin-bottom:6px">
+      <span class="emoji">🌀</span> 牛鞭效應
+    </div>
     <div style="font-size:13px;color:var(--c1);margin-bottom:10px;line-height:1.8">
-      消費者需求只從 <b id="db-base" style="color:var(--c0)">4</b> 到 <b id="db-peak" style="color:var(--c0)">8</b> 箱，<br>
-      但越上游的訂單波動越大，這就是為什麼大家都在虧錢的原因。
+      消費者需求只從 <b id="db-base" style="color:var(--c0)">4</b>→<b id="db-peak" style="color:var(--c0)">8</b> 箱，<br>
+      但越上游訂單波動越大，這就是為什麼大家利潤都不理想。
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:8px;font-size:12px">
       <span style="color:#555">■ 消費者</span>
-      <span style="color:var(--blue)">■ 零售</span>
-      <span style="color:var(--grn)">■ 批發</span>
-      <span style="color:var(--yel)">■ 分銷</span>
-      <span style="color:var(--red)">■ 製造</span>
+      <span class="role-retailer">■ 零售</span>
+      <span class="role-wholesaler">■ 批發</span>
+      <span class="role-distributor">■ 分銷</span>
+      <span class="role-manufacturer">■ 製造</span>
     </div>
     <canvas id="db-bw" width="390" height="120" style="width:100%;height:120px;background:#000;border:2px solid var(--b1)"></canvas>
   </div>
 
-  <!-- 啟示 -->
   <div class="hint" style="margin-bottom:14px">
-    <div style="font-size:14px;font-weight:700;margin-bottom:6px">💡 為什麼每個人都沒賺到最多？</div>
+    <div style="font-size:14px;font-weight:700;margin-bottom:6px">
+      <span class="emoji">💡</span> 為什麼大家都沒賺到最多？
+    </div>
     <div id="db-lesson" style="font-size:13px;line-height:2"></div>
   </div>
 
   <button class="pbtn pbtn-y" onclick="restart()"
     style="width:100%;font-size:15px;padding:14px;text-align:center;margin-bottom:10px">
-    🔄 再玩一局（新需求）
+    <span class="emoji">🔄</span> 再玩一局（新需求）
   </button>
   <button class="pbtn pbtn-b" onclick="goHome()"
     style="width:100%;font-size:14px;padding:10px;text-align:center">
     ← 回首頁
   </button>
-
 </div>
 </div>
 
 <script>
-// ══════════════════════════════════════════
-// SPRITES (20×24, 4px each → 80×96)
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════
+// SPRITES 20×24
+// ═══════════════════════════════════════
 const _=null
 const C={
   sk:'#fbbf24',sk2:'#d97706',sk3:'#92400e',
@@ -427,122 +499,12 @@ const C={
   br:'#78350f',br2:'#451a03',gd:'#fbbf24',gd2:'#f59e0b',rd:'#fca5a5',
 }
 const SPR={
-  retailer:[
-    [_,_,_,_,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_],
-    [_,_,_,C.b3,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b3,_,_,_,_,_,_],
-    [_,_,C.b3,C.b1,C.b1,C.b1,C.b1,C.b1,C.wh,C.b1,C.b1,C.b1,C.b1,C.b1,C.b3,_,_,_,_,_],
-    [_,C.b3,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b3,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.bk,C.bk,C.sk,C.sk,C.sk,C.sk,C.sk,C.bk,C.bk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk2,C.sk2,C.sk2,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,C.sk,C.sk,C.sk,C.b1,C.b1,C.b1,C.b1,C.b1,C.b1,C.b1,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [C.wh,C.wh,C.wh,C.b1,C.b1,C.b1,C.b2,C.b1,C.b2,C.b1,C.b1,C.b1,C.wh,C.wh,C.sk,_,_,_,_,_],
-    [C.wh,C.wh,C.b1,C.b1,C.b1,C.b1,C.b1,C.wh,C.b1,C.b1,C.b1,C.b1,C.wh,C.wh,_,_,_,_,_,_],
-    [_,C.sk,C.b1,C.b1,C.b1,C.b2,C.b2,C.b2,C.b2,C.b1,C.b1,C.b1,C.sk,_,_,_,_,_,_,_],
-    [_,_,C.b2,C.b2,C.b2,C.b1,C.b1,C.b1,C.b1,C.b2,C.b2,C.b2,_,_,_,_,_,_,_,_],
-    [_,_,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b4,C.b4,C.b4,C.gd,C.gd,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b4,C.b4,C.b4,_,_,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.gy,C.gy,C.gy,_,_,C.b4,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
-  wholesaler:[
-    [_,_,_,_,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_],
-    [_,_,_,C.g3,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g3,_,_,_,_,_,_],
-    [_,_,C.g3,C.g2,C.g1,C.g1,C.g1,C.g1,C.wh,C.g1,C.g1,C.g1,C.g1,C.g2,C.g3,_,_,_,_,_],
-    [_,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.bk,C.bk,C.bk,C.sk,C.sk,C.sk,C.bk,C.bk,C.bk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk2,C.sk2,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,C.sk,C.sk,C.sk,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [C.wh,C.wh,C.wh,C.g1,C.g1,C.g2,C.g1,C.g1,C.g2,C.g1,C.g1,C.g1,C.wh,C.wh,_,_,C.wh,C.wh,_,_],
-    [C.wh,C.wh,C.g1,C.g1,C.g1,C.g1,C.wh,C.g1,C.g1,C.g1,C.g1,C.g1,C.wh,C.wh,_,_,C.wh,C.wh,_,_],
-    [_,C.sk,C.g1,C.g1,C.g1,C.g2,C.g1,C.g1,C.g2,C.g1,C.g1,C.g1,C.sk,_,_,_,_,_,_,_],
-    [_,_,C.g2,C.g2,C.g2,C.g1,C.g1,C.g1,C.g1,C.g2,C.g2,C.g2,_,_,_,_,_,_,_,_],
-    [_,_,C.g2,C.g2,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g2,C.g2,_,_,_,_,_,_,_,_],
-    [_,_,C.g4,C.g4,C.g4,C.g4,C.gd,C.gd,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_,_,_],
-    [_,_,C.g4,C.g4,C.g4,C.g4,_,_,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_,_,_],
-    [_,_,C.g4,C.g3,C.g3,C.g4,_,_,C.g4,C.g3,C.g3,C.g4,_,_,_,_,_,_,_,_],
-    [_,_,C.g4,C.g3,C.g3,C.g4,_,_,C.g4,C.g3,C.g3,C.g4,_,_,_,_,_,_,_,_],
-    [_,_,C.g4,C.y2,C.y2,C.y2,_,_,C.g4,C.y2,C.y2,C.y2,_,_,_,_,_,_,_,_],
-    [_,_,C.y2,C.y2,C.y2,C.y2,_,_,C.y2,C.y2,C.y2,C.y2,_,_,_,_,_,_,_,_],
-    [_,_,C.y3,C.y3,C.y3,C.y3,_,_,C.y3,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
-  distributor:[
-    [_,_,_,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,_,_,_,_,_,_,_,_],
-    [_,_,C.br,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.br,C.br,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.bk,C.bk,C.bk,C.gy,C.gy,C.bk,C.bk,C.bk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.bk,C.gy,C.bk,C.gy,C.gy,C.bk,C.gy,C.bk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk2,C.sk,C.sk,C.sk2,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_,_],
-    [_,C.sk,C.sk,C.sk,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [C.wh,C.wh,C.wh,C.y2,C.y2,C.y3,C.y2,C.y2,C.y3,C.y2,C.y2,C.y2,C.wh,C.wh,_,_,_,_,_,_],
-    [C.wh,C.wh,C.y2,C.y2,C.y2,C.y2,C.wh,C.y2,C.y2,C.y2,C.y2,C.y2,C.wh,C.wh,_,_,_,_,_,_],
-    [_,C.sk,C.y2,C.y2,C.y2,C.y3,C.y2,C.y2,C.y3,C.y2,C.y2,C.y2,C.sk,_,_,_,_,_,_,_],
-    [_,_,C.y3,C.y3,C.y3,C.y2,C.y2,C.y2,C.y2,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],
-    [_,_,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],
-    [_,_,C.y4,C.y4,C.y4,C.y4,C.gd,C.gd2,C.y4,C.y4,C.y4,C.y4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b4,C.b4,C.b4,_,_,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],
-    [_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
-  manufacturer:[
-    [_,_,_,_,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,_,_,_,_,_,_],
-    [_,_,_,C.r3,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r3,_,_,_,_,_,_],
-    [_,_,C.r3,C.r2,C.r1,C.r1,C.r1,C.r1,C.wh,C.r1,C.r1,C.r1,C.r1,C.r2,C.r3,_,_,_,_,_],
-    [_,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,_,_,_,_,_],
-    [_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.bk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.bk,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [_,_,C.sk,C.br,C.br2,C.br,C.br2,C.br,C.br2,C.br,C.br,C.sk,_,_,_,_,_,_,_,_],
-    [_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],
-    [_,C.sk,C.sk,C.sk,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.sk,C.sk,C.sk,_,_,_,_,_,_],
-    [C.gy,C.gy,C.gy,C.r1,C.r1,C.r2,C.r1,C.r1,C.r2,C.r1,C.r1,C.r1,C.gy,C.gy,_,_,_,_,_,_],
-    [C.gy,C.gy,C.r1,C.r1,C.r1,C.r1,C.wh,C.r1,C.r1,C.r1,C.r1,C.r1,C.gy,C.gy,_,_,_,_,_,_],
-    [_,C.sk,C.r1,C.r1,C.r1,C.r2,C.r1,C.r1,C.r2,C.r1,C.r1,C.r1,C.sk,_,_,_,_,_,_,_],
-    [_,_,C.r2,C.r2,C.r2,C.r1,C.r1,C.r1,C.r1,C.r2,C.r2,C.r2,_,_,_,_,_,_,_,_],
-    [_,_,C.r2,C.r2,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r2,C.r2,_,_,_,_,_,_,_,_],
-    [_,_,C.r3,C.r3,C.r3,C.r3,C.gd,C.gd2,C.r3,C.r3,C.r3,C.r3,_,_,_,_,_,_,_,_],
-    [_,_,C.r4,C.r4,C.r4,C.r4,_,_,C.r4,C.r4,C.r4,C.r4,_,_,_,_,_,_,_,_],
-    [_,_,C.r4,C.r3,C.r3,C.r4,_,_,C.r4,C.r3,C.r3,C.r4,_,_,_,_,_,_,_,_],
-    [_,_,C.r4,C.r3,C.r3,C.r4,_,_,C.r4,C.r3,C.r3,C.r4,_,_,_,_,_,_,_,_],
-    [_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],
-    [_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-    [_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],
-  ],
+retailer:[[_,_,_,_,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_],[_,_,_,C.b3,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b3,_,_,_,_,_,_],[_,_,C.b3,C.b1,C.b1,C.b1,C.b1,C.b1,C.wh,C.b1,C.b1,C.b1,C.b1,C.b1,C.b3,_,_,_,_,_],[_,C.b3,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b3,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.bk,C.bk,C.sk,C.sk,C.sk,C.sk,C.sk,C.bk,C.bk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk2,C.sk2,C.sk2,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,_,_,_,_,_,_],[_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,C.sk,C.sk,C.sk,C.b1,C.b1,C.b1,C.b1,C.b1,C.b1,C.b1,C.sk,C.sk,C.sk,_,_,_,_,_,_],[C.wh,C.wh,C.wh,C.b1,C.b1,C.b1,C.b2,C.b1,C.b2,C.b1,C.b1,C.b1,C.wh,C.wh,C.sk,_,_,_,_,_],[C.wh,C.wh,C.b1,C.b1,C.b1,C.b1,C.b1,C.wh,C.b1,C.b1,C.b1,C.b1,C.wh,C.wh,_,_,_,_,_,_],[_,C.sk,C.b1,C.b1,C.b1,C.b2,C.b2,C.b2,C.b2,C.b1,C.b1,C.b1,C.sk,_,_,_,_,_,_,_],[_,_,C.b2,C.b2,C.b2,C.b1,C.b1,C.b1,C.b1,C.b2,C.b2,C.b2,_,_,_,_,_,_,_,_],[_,_,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,C.b2,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b4,C.b4,C.b4,C.gd,C.gd,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b4,C.b4,C.b4,_,_,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.gy,C.gy,C.gy,_,_,C.b4,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]],
+wholesaler:[[_,_,_,_,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_],[_,_,_,C.g3,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g3,_,_,_,_,_,_],[_,_,C.g3,C.g2,C.g1,C.g1,C.g1,C.g1,C.wh,C.g1,C.g1,C.g1,C.g1,C.g2,C.g3,_,_,_,_,_],[_,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.bk,C.bk,C.bk,C.sk,C.sk,C.sk,C.bk,C.bk,C.bk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk2,C.sk2,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,C.sk,C.sk,C.sk,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.g1,C.sk,C.sk,C.sk,_,_,_,_,_,_],[C.wh,C.wh,C.wh,C.g1,C.g1,C.g2,C.g1,C.g1,C.g2,C.g1,C.g1,C.g1,C.wh,C.wh,_,_,C.wh,C.wh,_,_],[C.wh,C.wh,C.g1,C.g1,C.g1,C.g1,C.wh,C.g1,C.g1,C.g1,C.g1,C.g1,C.wh,C.wh,_,_,C.wh,C.wh,_,_],[_,C.sk,C.g1,C.g1,C.g1,C.g2,C.g1,C.g1,C.g2,C.g1,C.g1,C.g1,C.sk,_,_,_,_,_,_,_],[_,_,C.g2,C.g2,C.g2,C.g1,C.g1,C.g1,C.g1,C.g2,C.g2,C.g2,_,_,_,_,_,_,_,_],[_,_,C.g2,C.g2,C.g3,C.g3,C.g3,C.g3,C.g3,C.g3,C.g2,C.g2,_,_,_,_,_,_,_,_],[_,_,C.g4,C.g4,C.g4,C.g4,C.gd,C.gd,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_,_,_],[_,_,C.g4,C.g4,C.g4,C.g4,_,_,C.g4,C.g4,C.g4,C.g4,_,_,_,_,_,_,_,_],[_,_,C.g4,C.g3,C.g3,C.g4,_,_,C.g4,C.g3,C.g3,C.g4,_,_,_,_,_,_,_,_],[_,_,C.g4,C.g3,C.g3,C.g4,_,_,C.g4,C.g3,C.g3,C.g4,_,_,_,_,_,_,_,_],[_,_,C.g4,C.y2,C.y2,C.y2,_,_,C.g4,C.y2,C.y2,C.y2,_,_,_,_,_,_,_,_],[_,_,C.y2,C.y2,C.y2,C.y2,_,_,C.y2,C.y2,C.y2,C.y2,_,_,_,_,_,_,_,_],[_,_,C.y3,C.y3,C.y3,C.y3,_,_,C.y3,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]],
+distributor:[[_,_,_,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,_,_,_,_,_,_,_,_],[_,_,C.br,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.br,C.br,_,_,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,_,C.sk,C.bk,C.bk,C.bk,C.gy,C.gy,C.bk,C.bk,C.bk,C.sk,_,_,_,_,_,_,_,_],[_,_,C.sk,C.bk,C.gy,C.bk,C.gy,C.gy,C.bk,C.gy,C.bk,C.sk,_,_,_,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk2,C.sk,C.sk,C.sk2,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,_,C.sk,C.rd,C.sk,C.sk,C.sk,C.sk,C.sk,C.rd,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_,_],[_,C.sk,C.sk,C.sk,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.sk,C.sk,C.sk,_,_,_,_,_,_],[C.wh,C.wh,C.wh,C.y2,C.y2,C.y3,C.y2,C.y2,C.y3,C.y2,C.y2,C.y2,C.wh,C.wh,_,_,_,_,_,_],[C.wh,C.wh,C.y2,C.y2,C.y2,C.y2,C.wh,C.y2,C.y2,C.y2,C.y2,C.y2,C.wh,C.wh,_,_,_,_,_,_],[_,C.sk,C.y2,C.y2,C.y2,C.y3,C.y2,C.y2,C.y3,C.y2,C.y2,C.y2,C.sk,_,_,_,_,_,_,_],[_,_,C.y3,C.y3,C.y3,C.y2,C.y2,C.y2,C.y2,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],[_,_,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,_,_,_,_,_,_,_,_],[_,_,C.y4,C.y4,C.y4,C.y4,C.gd,C.gd2,C.y4,C.y4,C.y4,C.y4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b4,C.b4,C.b4,_,_,C.b4,C.b4,C.b4,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],[_,_,C.b4,C.b3,C.b3,C.b4,_,_,C.b4,C.b3,C.b3,C.b4,_,_,_,_,_,_,_,_],[_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]],
+manufacturer:[[_,_,_,_,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,C.r4,_,_,_,_,_,_],[_,_,_,C.r3,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r3,_,_,_,_,_,_],[_,_,C.r3,C.r2,C.r1,C.r1,C.r1,C.r1,C.wh,C.r1,C.r1,C.r1,C.r1,C.r2,C.r3,_,_,_,_,_],[_,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,_,_,_,_,_],[_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.bk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.bk,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.br,C.sk,C.sk,C.sk,_,_,_,_,_,_],[_,_,C.sk,C.br,C.br2,C.br,C.br2,C.br,C.br2,C.br,C.br,C.sk,_,_,_,_,_,_,_,_],[_,_,_,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,C.sk,_,_,_,_,_,_,_,_],[_,C.sk,C.sk,C.sk,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.r1,C.sk,C.sk,C.sk,_,_,_,_,_,_],[C.gy,C.gy,C.gy,C.r1,C.r1,C.r2,C.r1,C.r1,C.r2,C.r1,C.r1,C.r1,C.gy,C.gy,_,_,_,_,_,_],[C.gy,C.gy,C.r1,C.r1,C.r1,C.r1,C.wh,C.r1,C.r1,C.r1,C.r1,C.r1,C.gy,C.gy,_,_,_,_,_,_],[_,C.sk,C.r1,C.r1,C.r1,C.r2,C.r1,C.r1,C.r2,C.r1,C.r1,C.r1,C.sk,_,_,_,_,_,_,_],[_,_,C.r2,C.r2,C.r2,C.r1,C.r1,C.r1,C.r1,C.r2,C.r2,C.r2,_,_,_,_,_,_,_,_],[_,_,C.r2,C.r2,C.r3,C.r3,C.r3,C.r3,C.r3,C.r3,C.r2,C.r2,_,_,_,_,_,_,_,_],[_,_,C.r3,C.r3,C.r3,C.r3,C.gd,C.gd2,C.r3,C.r3,C.r3,C.r3,_,_,_,_,_,_,_,_],[_,_,C.r4,C.r4,C.r4,C.r4,_,_,C.r4,C.r4,C.r4,C.r4,_,_,_,_,_,_,_,_],[_,_,C.r4,C.r3,C.r3,C.r4,_,_,C.r4,C.r3,C.r3,C.r4,_,_,_,_,_,_,_,_],[_,_,C.r4,C.r3,C.r3,C.r4,_,_,C.r4,C.r3,C.r3,C.r4,_,_,_,_,_,_,_,_],[_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy,C.gy,C.gy,C.gy,_,_,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_],[_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,C.gy2,C.gy2,C.gy2,C.gy2,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_],[_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_]],
 }
-const MUG=[
-  [_,_,_,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,C.gy,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_],
-  [_,C.gy,C.y3,C.wh,C.wh,C.y1,C.y1,C.y1,C.y1,C.y1,C.y1,C.y2,C.y3,C.gy,C.gy,_,_,_,_,_,_,_,_,_],
-  [_,C.gy,C.y3,C.wh,C.y1,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y1,C.y3,C.gy,C.y1,C.gy,_,_,_,_,_,_,_,_],
-  [_,C.gy,C.y3,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y3,C.gy,C.y2,C.gy,_,_,_,_,_,_,_,_],
-  [_,C.gy,C.y3,C.y1,C.y2,C.y1,C.y1,C.y1,C.y1,C.y2,C.y1,C.y2,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_],
-  [_,C.gy,C.y3,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_],
-  [_,_,C.gy,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_,_],
-  [_,_,_,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_,_,_],
-]
+const MUG=[[_,_,_,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_,_,_],[_,_,C.gy,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_],[_,C.gy,C.y3,C.wh,C.wh,C.y1,C.y1,C.y1,C.y1,C.y1,C.y1,C.y2,C.y3,C.gy,C.gy,_,_,_,_,_,_,_,_,_],[_,C.gy,C.y3,C.wh,C.y1,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y1,C.y3,C.gy,C.y1,C.gy,_,_,_,_,_,_,_,_],[_,C.gy,C.y3,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y1,C.y1,C.y2,C.y3,C.gy,C.y2,C.gy,_,_,_,_,_,_,_,_],[_,C.gy,C.y3,C.y1,C.y2,C.y1,C.y1,C.y1,C.y1,C.y2,C.y1,C.y2,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_],[_,C.gy,C.y3,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y2,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_],[_,_,C.gy,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.y3,C.gy,_,_,_,_,_,_,_,_,_,_,_],[_,_,_,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,C.gy,_,_,_,_,_,_,_,_,_,_,_,_]]
 
 function drawSpr(id,role,W,H){
   const c=document.getElementById(id);if(!c)return
@@ -563,17 +525,15 @@ function drawMug(id){
   }
 }
 
-// ══════════════════════════════════════════
-// 需求公式
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════
+// 需求生成
+// ═══════════════════════════════════════
 function genDemand(){
   let s=Date.now()%999983
   const lcg=()=>{s=(s*1664525+1013904223)&0x7fffffff;return s/0x7fffffff}
-  const R=(a,b)=>a+(b-a)*lcg()
-  const RI=(a,b)=>Math.floor(R(a,b+.99))
+  const R=(a,b)=>a+(b-a)*lcg(),RI=(a,b)=>Math.floor(R(a,b+.99))
   const base=R(3.5,5.5),amp1=R(1.8,4.2),per1=R(6,14),ph1=R(0,6.28)
-  const amp2=R(.5,1.8),per2=R(3,7),ph2=R(0,6.28)
-  const trend=R(-.1,.15),nAmp=R(.3,1.1)
+  const amp2=R(.5,1.8),per2=R(3,7),ph2=R(0,6.28),trend=R(-.1,.15),nAmp=R(.3,1.1)
   const nShock=RI(0,2),shocks=[]
   for(let i=0;i<nShock;i++) shocks.push({w:RI(3,18),m:R(2.5,7),s:lcg()>.4?1:-1})
   const curve=[]
@@ -585,78 +545,94 @@ function genDemand(){
   }
   const max=Math.max(...curve),min=Math.min(...curve),maxW=curve.indexOf(max)+1
   let mode,modeDesc
-  if(nShock>=2){mode='⚡ 雙重衝擊型';modeDesc='兩次突發需求衝擊，大家都在恐慌中做決策。'}
-  else if(nShock===1){mode='💥 突發衝擊型';modeDesc=`第 ${shocks[0]?.w} 週附近需求暴增，考驗各公司的應變速度。`}
+  if(nShock>=2){mode='⚡ 雙重衝擊型';modeDesc='兩次突發需求衝擊，考驗快速應變能力。'}
+  else if(nShock===1){mode='💥 突發衝擊型';modeDesc=`第 ${shocks[0]?.w} 週附近需求暴增，之後迅速回落。`}
   else if(maxW>=6&&maxW<=14){mode='☀️ 夏季旺季型';modeDesc='中段需求走高，提前備貨的公司賺最多。'}
   else if(maxW>=14){mode='❄️ 冬季旺季型';modeDesc='後半段需求持續上升，後知後覺的公司損失慘重。'}
   else{mode='📈 自然波動型';modeDesc='需求有漲有跌，最考驗各公司的預測能力。'}
   return{curve,mode,modeDesc,base:Math.round(min),peak:Math.round(max)}
 }
 
-// ══════════════════════════════════════════
-// 遊戲引擎（利潤版）
-// 每箱賣出 +$2，庫存 -$0.50/週，缺貨 -$1.00/週
-// ══════════════════════════════════════════
-const STARTING_CAPITAL = 200  // 起始資金
-const SELL_PRICE  = 2.00  // 每箱銷售收入
-const HOLD_COST   = 0.50  // 每箱庫存成本/週
-const SHORT_COST  = 1.00  // 每箱缺貨罰款/週
+// ═══════════════════════════════════════
+// 遊戲引擎（平衡版）
+// 各角色不同售價，越接近消費者越高
+// 持有費 $0.10，缺貨罰 $0.50
+// 起始資金 $200
+// ═══════════════════════════════════════
+const START_CAPITAL = 200
+const HOLD_COST     = 0.10
+const SHORT_COST    = 0.50
+const WEEKS         = 20
+
 const ROLES=['retailer','wholesaler','distributor','manufacturer']
+
+// 各角色定價（越接近消費者越高，符合現實供應鏈邏輯）
+const SELL_PRICE={
+  retailer:    3.00,  // 直接賣給消費者，最高
+  wholesaler:  2.00,
+  distributor: 1.40,
+  manufacturer:1.00,  // 最遠，但成本也最低（無進貨成本）
+}
 
 const RCFG={
   retailer:{
     name:'零售商',emoji:'🏪',color:'var(--blue)',
     title:'直接面對消費者的超市老闆',
-    mission:'你的超市每週賣啤酒給消費者。\n賣出一箱賺 $2，但囤貨每週要付 $0.50，缺貨每箱罰 $1。\n目標：賣出越多越好，同時控制庫存！',
+    mission:'你的超市每週賣啤酒給消費者。\n消費者需求每週變化，你必須備好庫存！\n每箱賣出 $3.00，但囤太多或缺貨都會虧錢。',
     see:['消費者本週需求量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','上游任何資訊','下週需求'],
-    target:'盡量賣出所有消費者需求，不要缺貨也不要積太多貨。\n起始資金 $200，優秀目標：帳戶 > $320',
-    tip:'需求上升前提前補貨，需求下降前減少訂單。庫存太多和缺貨都會讓你虧錢！',
+    target:'起始 $200，優秀目標：帳戶 > $350\n（理性策略可達 $400-500）',
+    tip:'需求波動時提前備貨最重要！缺貨罰款比庫存費更貴。',
     qlabel:'你要向批發商訂幾箱？',dlabel:'消費者需求',
-    threshold:120,  // 優秀利潤門檻（正數）
-    hints:{5:'⚠️ 需求變化了！調整你的備貨策略。',10:'你的訂單量合理嗎？過度訂貨會堆積庫存費用。',16:'最後幾週，控制好庫存量，別在結尾付太多庫存費！'},
+    threshold:350,
+    hints:{5:'⚠️ 需求出現變化！快調整備貨策略。',10:'庫存和缺貨哪個更傷錢？看看你的本週結算！',16:'最後幾週，避免過度囤貨，別在結尾白付庫存費。'},
   },
   wholesaler:{
     name:'批發商',emoji:'📦',color:'var(--grn)',
     title:'服務零售商的倉儲公司老闆',
-    mission:'你的公司批發啤酒給零售商。\n每箱出貨賺 $2，但囤貨要付費，缺貨也要罰款。\n問題：你只看得到零售商的訂單，不知道消費者真實需求！',
+    mission:'你的公司批發啤酒給零售商。\n每箱賣出 $2.00，成本比零售商低，但資訊也更少。\n小心：零售商的訂單可能比真實需求誇大很多！',
     see:['零售商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['零售商庫存','消費者真實需求','分銷商庫存'],
-    target:'滿足零售商需求，同時避免庫存積壓。\n起始資金 $200，優秀目標：帳戶 > $280\n警告：零售商可能在恐慌下單！',
-    tip:'零售商的訂單 ≠ 消費者真實需求。他們可能誇大了需求，別跟著被騙！',
+    target:'起始 $200，優秀目標：帳戶 > $280\n（理性策略可達 $300-400）',
+    tip:'零售商的訂單 ≠ 消費者需求！他們可能在恐慌下單，跟著亂補貨會虧大錢。',
     qlabel:'你要向分銷商訂幾箱？',dlabel:'零售商訂單',
-    threshold:80,
-    hints:{5:'零售商突然大量下單？先冷靜分析，是真實需求還是恐慌？',8:'你的利潤還好嗎？庫存太多代表你被假需求騙了。',15:'庫存太多？減少訂單，消化手上的貨先。'},
+    threshold:280,
+    hints:{5:'零售商突然大量下單？冷靜！先分析是真實需求還是恐慌？',8:'你的利潤還好嗎？庫存太多代表你被假需求騙了。',15:'庫存過多就減少下單，消化手上的貨先。'},
   },
   distributor:{
     name:'分銷商',emoji:'🚛',color:'var(--yel)',
     title:'連結工廠與批發商的物流公司老闆',
-    mission:'你的物流公司配送啤酒給批發商。\n每箱出貨賺 $2，但你的訂單已被放大了兩層！\n你看到的批發商需求可能比消費者真實需求大很多。',
+    mission:'你的物流公司每箱賣 $1.40，沒有進貨成本。\n但你的訂單已被放大兩層，波動很劇烈！\n成為供應鏈的穩定器，你就能保住利潤。',
     see:['批發商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','零售商資訊','消費者需求'],
-    target:'穩定出貨給批發商，避免大幅波動。\n起始資金 $200，優秀目標：帳戶 > $250\n關鍵：平滑你的訂單！',
-    tip:'設定目標庫存（例如 16 箱），每週用公式下單。不要跟著批發商的波動亂動！',
+    target:'起始 $200，優秀目標：帳戶 > $240\n（理性策略可達 $280-330）',
+    tip:'設定目標庫存，每週固定用公式下單。不要跟著批發商的波動亂動！',
     qlabel:'你要向製造商訂幾箱？',dlabel:'批發商訂單',
-    threshold:50,
-    hints:{5:'批發商大量下單？記住，他們可能也被零售商騙了。保持冷靜！',10:'你的利潤是正的嗎？平穩下單的公司通常表現最好。',15:'最後五週，用固定公式下單，別情緒化！'},
+    threshold:240,
+    hints:{5:'批發商大量下單？記住，他們可能也被零售商騙了！',10:'平穩下單的公司通常利潤最穩定。',15:'最後五週，用固定公式下單，別情緒化！'},
   },
   manufacturer:{
     name:'製造商',emoji:'🏭',color:'var(--red)',
     title:'啤酒工廠老闆，供應鏈的源頭',
-    mission:'你的工廠生產啤酒。你決定生產多少箱，2 週後完工。\n你是牛鞭效應的最終承受者：訂單波動在你這裡最大！\n每箱賣出賺 $2，但你的庫存費和缺貨罰款可能最高。',
+    mission:'你的工廠每箱賣 $1.00，沒有進貨成本（自己生產）。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。',
     see:['分銷商本週訂單量','成品庫存','生產線數量','積壓訂單'],
     blind:['分銷商庫存','下游一切','消費者需求'],
-    target:'穩定生產是王道。大增大減只會造成更多損失。\n起始資金 $200，優秀目標：帳戶 > $220',
-    tip:'維持平穩生產比大增大減更賺錢！你看到的訂單已被放大了 3 層，要打折看。',
+    target:'起始 $200，優秀目標：帳戶 > $220\n（理性策略可達 $250-300）',
+    tip:'你看到的訂單已被放大 3 層，要打折看！平穩生產比大起大落更賺錢。',
     qlabel:'本週生產幾箱？',dlabel:'分銷商訂單',
-    threshold:20,
-    hints:{5:'分銷商訂單跳了？先算：你現有庫存 + 生產線夠嗎？別恐慌增產！',10:'你的利潤狀況怎樣？生產太多 = 庫存費暴增。',15:'快結束了！不要再大量增產，那只會讓你在最後幾週付大量庫存費。'},
+    threshold:220,
+    hints:{5:'分銷商訂單跳了？先算：現有庫存 + 生產線夠嗎？別恐慌增產！',10:'生產量穩不穩定？大波動 = 大量庫存費或缺貨罰。',15:'快結束了！不要大量增產，那只會讓最後幾週付大量庫存費。'},
   },
 }
 
 function initState(dem){
   const roles={}
-  for(const r of ROLES)roles[r]={inventory:12,backlog:0,pipeline:[4,4],profit:0,cash:STARTING_CAPITAL,totalSold:0,totalHC:0,totalSC:0,history:[]}
+  for(const r of ROLES)roles[r]={
+    inventory:12,backlog:0,pipeline:[4,4],
+    cash:START_CAPITAL,profit:0,
+    totalSold:0,totalHC:0,totalSC:0,
+    history:[]
+  }
   return{week:1,roles,status:'active',...dem}
 }
 
@@ -669,39 +645,38 @@ function processWeek(state,orders){
   const sh={},bl={},ia={}
   for(const r of ROLES){sh[r]=Math.min(inv[r],td[r]);ia[r]=inv[r]-sh[r];bl[r]=td[r]-sh[r]}
   for(const r of ROLES){
-    // 利潤計算：賣出收入 - 庫存費 - 缺貨罰款
-    const revenue = sh[r] * SELL_PRICE
-    const hc      = ia[r] * HOLD_COST
-    const sc      = bl[r] * SHORT_COST
-    const weekProfit = revenue - hc - sc
-    const newProfit  = state.roles[r].profit + weekProfit
-    const newCash=STARTING_CAPITAL+newProfit
-    snap[r]={wk,recv:recv[r],dem:inc[r],sold:sh[r],inv:ia[r],bl:bl[r],ord:orders[r],revenue,hc,sc,weekProfit,profit:newProfit,cash:newCash}
-    nr[r]={
-      inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],
-      profit:newProfit,
-      cash:STARTING_CAPITAL+newProfit,
-      totalSold:state.roles[r].totalSold+sh[r],
-      totalHC:state.roles[r].totalHC+hc,
-      totalSC:state.roles[r].totalSC+sc,
-      history:[...state.roles[r].history,snap[r]]
-    }
+    const sell=SELL_PRICE[r]
+    const revenue=sh[r]*sell
+    const hc=ia[r]*HOLD_COST
+    const sc=bl[r]*SHORT_COST
+    const weekProfit=revenue-hc-sc
+    const newProfit=state.roles[r].profit+weekProfit
+    const newCash=START_CAPITAL+newProfit
+    snap[r]={wk,recv:recv[r],dem:inc[r],sold:sh[r],inv:ia[r],bl:bl[r],ord:orders[r],
+             revenue,hc,sc,weekProfit,profit:newProfit,cash:newCash}
+    nr[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],
+           cash:newCash,profit:newProfit,
+           totalSold:state.roles[r].totalSold+sh[r],
+           totalHC:state.roles[r].totalHC+hc,
+           totalSC:state.roles[r].totalSC+sc,
+           history:[...state.roles[r].history,snap[r]]}
   }
-  return{ns:{...state,week:wk+1,roles:nr,status:wk>=20?'done':'active'},snap,cd}
+  return{ns:{...state,week:wk+1,roles:nr,status:wk>=WEEKS?'done':'active'},snap,cd}
 }
 
 function auto(role,state){
   const rs=state.roles[role],it=rs.pipeline[0]+rs.pipeline[1]
-  return Math.max(0,Math.round(14-rs.inventory-it+rs.backlog))
+  const targetInv=Math.round((state.curve[state.week-1]||4)*1.2)
+  return Math.max(0,targetInv-rs.inventory-it+Math.round(rs.backlog*0.5))
 }
 
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════
 // UI
-// ══════════════════════════════════════════
+// ═══════════════════════════════════════
 let GS=null,ROLE=null,SNAP=null
-let hProfit=[],hInv=[],hOrd=[]
+let hCash=[],hInv=[],hOrd=[]
 let timerID=null,tLeft=60
-let HI=JSON.parse(localStorage.getItem('bgh5')||'[]')
+let HI=JSON.parse(localStorage.getItem('bgh6')||'[]')
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById('s-'+id).classList.add('on');window.scrollTo(0,0)}
 function goHome(){clearInterval(timerID);show('home')}
@@ -710,7 +685,7 @@ function initHome(){
   drawMug('c-mug')
   const list=document.getElementById('role-list');list.innerHTML=''
   ROLES.forEach(r=>{
-    const cfg=RCFG[r]
+    const cfg=RCFG[r],sell=SELL_PRICE[r]
     const div=document.createElement('div')
     div.style.cssText='display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;border-bottom:2px solid var(--b1);transition:background .1s'
     div.onmouseenter=()=>div.style.background='#1f0d2a'
@@ -722,7 +697,10 @@ function initHome(){
         <div style="font-size:15px;color:${cfg.color}">${cfg.emoji} ${cfg.name}</div>
         <div style="font-size:12px;color:var(--c2);margin-top:2px">${cfg.title}</div>
       </div>
-      <div style="font-size:12px;color:var(--grn);flex-shrink:0">目標&gt;$${cfg.threshold}</div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;color:var(--grn)">$${sell}/箱</div>
+        <div style="font-size:11px;color:var(--c2)">目標>$${cfg.threshold}</div>
+      </div>
     `
     div.onclick=()=>showRole(r)
     list.appendChild(div)
@@ -731,37 +709,40 @@ function initHome(){
   const el=document.getElementById('hiscore')
   if(!HI.length){el.innerHTML='<span style="color:var(--c2)">尚無紀錄，快來賺第一桶金！</span>';return}
   el.innerHTML=HI.slice(0,5).map((h,i)=>{
-    const cash=h.c||STARTING_CAPITAL+h.p
-    const diff=cash-STARTING_CAPITAL
+    const cash=h.c||200
+    const diff=cash-200
     return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)">
       <span>${['🥇','🥈','🥉','4.','5.'][i]} ${RCFG[h.r]?.emoji||''} ${RCFG[h.r]?.name||h.r}</span>
-      <span style="color:${cash>STARTING_CAPITAL?'var(--grn)':'var(--red)'}">$${cash.toFixed(0)} <span style="font-size:11px;color:var(--c2)">(${diff>=0?'+':''}$${diff.toFixed(0)})</span></span>
+      <span style="color:${cash>200?'var(--grn)':'var(--red)'}">$${cash.toFixed(0)} <span style="font-size:11px;color:var(--c2)">(${diff>=0?'+':''}$${diff.toFixed(0)})</span></span>
     </div>`
   }).join('')
 }
 
 function showRole(role){
-  ROLE=role
-  const cfg=RCFG[role]
-  document.getElementById('rc-name').textContent=`${cfg.emoji} ${cfg.name}`;document.getElementById('rc-name').style.color=cfg.color
+  ROLE=role;const cfg=RCFG[role]
+  document.getElementById('rc-name').textContent=`${cfg.emoji} ${cfg.name}`
+  document.getElementById('rc-name').style.color=cfg.color
   document.getElementById('rc-title').textContent=cfg.title
   document.getElementById('rc-mission').textContent=cfg.mission
   document.getElementById('rc-target').textContent=cfg.target
   document.getElementById('rc-see').innerHTML=cfg.see.map(s=>`<div>✓ ${s}</div>`).join('')
   document.getElementById('rc-blind').innerHTML=cfg.blind.map(s=>`<div>✗ ${s}</div>`).join('')
   document.getElementById('rc-tip').textContent=cfg.tip
-  document.getElementById('rc-go').style.borderColor=cfg.color;document.getElementById('rc-go').style.color=cfg.color
+  document.getElementById('rc-go').style.borderColor=cfg.color
+  document.getElementById('rc-go').style.color=cfg.color
   setTimeout(()=>drawSpr('rc-spr',role,80,96),30)
   show('role')
 }
 
 function enterGame(){
   const dem=genDemand()
-  GS=initState(dem);SNAP=null;hProfit=[];hInv=[];hOrd=[]
+  GS=initState(dem);SNAP=null;hCash=[];hInv=[];hOrd=[]
   const cfg=RCFG[ROLE]
-  document.getElementById('hud-role').textContent=`${cfg.emoji} ${cfg.name}`;document.getElementById('hud-role').style.color=cfg.color
+  document.getElementById('hud-role').textContent=`${cfg.emoji} ${cfg.name}`
+  document.getElementById('hud-role').style.color=cfg.color
   document.getElementById('g-azq').textContent=cfg.qlabel
   document.getElementById('g-dlabel').textContent=cfg.dlabel
+  document.getElementById('g-sell-badge').textContent=`$${SELL_PRICE[ROLE]}/箱`
   setTimeout(()=>drawSpr('g-spr',ROLE,40,48),30)
   refreshUI();show('game');startTimer()
 }
@@ -774,8 +755,7 @@ function startTimer(){
   prog.style.transition='none';prog.style.width='100%'
   requestAnimationFrame(()=>requestAnimationFrame(()=>{prog.style.transition='width 60s linear';prog.style.width='0%'}))
   timerID=setInterval(()=>{
-    tLeft--
-    el.textContent=tLeft
+    tLeft--;el.textContent=tLeft
     el.style.color=tLeft<=10?'var(--red)':tLeft<=20?'var(--yel)':'var(--gold)'
     if(tLeft<=0){clearInterval(timerID);const h=GS.roles[ROLE].history;doSubmit(h.length?h[h.length-1].ord:4)}
   },1000)
@@ -784,66 +764,56 @@ function startTimer(){
 function refreshUI(){
   const rs=GS.roles[ROLE],wk=GS.week,cfg=RCFG[ROLE]
   document.getElementById('hud-wk').textContent=`第 ${wk} 週 / 20 週`
-  // 利潤顯示
-  const profit=rs.profit
-  const cash=STARTING_CAPITAL+profit
-  const profitEl=document.getElementById('hud-profit')
-  profitEl.textContent=`$${cash.toFixed(0)}`
-  profitEl.style.color=cash>=STARTING_CAPITAL?'var(--grn)':cash>0?'var(--yel)':'var(--red)'
+
+  const cash=rs.cash
+  const cashEl=document.getElementById('hud-cash')
+  cashEl.textContent=`$${cash.toFixed(0)}`
+  cashEl.style.color=cash>=START_CAPITAL?'var(--grn)':cash>0?'var(--yel)':'var(--red)'
+
+  // 帳戶大顯示
+  const bigEl=document.getElementById('g-cash-big')
+  bigEl.textContent=`$${cash.toFixed(0)}`
+  bigEl.style.color=cash>=START_CAPITAL?'var(--grn)':cash>0?'var(--yel)':'var(--red)'
+  document.getElementById('g-cash-panel').className=cash>=START_CAPITAL?'cash-panel':'cash-panel loss'
 
   // 庫存
-  const inv=document.getElementById('g-inv')
-  inv.textContent=rs.inventory
-  inv.style.color=rs.inventory===0?'var(--red)':rs.inventory<4?'var(--yel)':'var(--grn)'
+  const invEl=document.getElementById('g-inv')
+  invEl.textContent=rs.inventory
+  invEl.style.color=rs.inventory===0?'var(--red)':rs.inventory<4?'var(--yel)':'var(--grn)'
 
-  // 本週利潤儀表板
-  // 帳戶餘額大顯示
-  const cashEl=document.getElementById('g-cash-display')
-  if(cashEl){
-    cashEl.textContent=`$${cash.toFixed(0)}`
-    cashEl.style.color=cash>=STARTING_CAPITAL?'var(--grn)':cash>0?'var(--yel)':'var(--red)'
-    // 加入帳戶底部的起始資金參考線文字
-    const dash=document.getElementById('g-profit-dash')
-    if(dash) dash.className=cash>=STARTING_CAPITAL?'profit-display pbox':'profit-display pbox profit-negative'
-  }
   if(SNAP){
     const s=SNAP[ROLE]
     const wpEl=document.getElementById('g-week-profit')
-    const sign=s.weekProfit>=0?'+':''
-    wpEl.textContent=`${sign}$${s.weekProfit.toFixed(1)}`
+    wpEl.textContent=(s.weekProfit>=0?'+':'')+`$${s.weekProfit.toFixed(1)}`
     wpEl.style.color=s.weekProfit>=0?'var(--grn)':'var(--red)'
     document.getElementById('g-revenue').textContent=`+$${s.revenue.toFixed(1)}`
     document.getElementById('g-hc').textContent=`-$${s.hc.toFixed(1)}`
     document.getElementById('g-sc').textContent=`-$${s.sc.toFixed(1)}`
     document.getElementById('g-sold').textContent=s.sold
     document.getElementById('g-dem').textContent=s.dem
-    document.getElementById('g-recv').textContent=`${s.recv} 箱`
+    document.getElementById('g-recv').textContent=s.recv
     document.getElementById('g-recv').style.color=s.recv>0?'var(--blue)':'var(--c2)'
   }else{
-    const wpEl=document.getElementById('g-week-profit')
-    if(wpEl){wpEl.textContent='—';wpEl.style.color='var(--c2)'}
-    document.getElementById('g-revenue').textContent='$—'
-    document.getElementById('g-hc').textContent='$—'
-    document.getElementById('g-sc').textContent='$—'
+    ['g-week-profit','g-revenue','g-hc','g-sc'].forEach(id=>document.getElementById(id).textContent='—')
     document.getElementById('g-sold').textContent='—'
     document.getElementById('g-dem').textContent='—'
-    document.getElementById('g-recv').textContent='— 箱'
+    document.getElementById('g-recv').textContent='—'
   }
-  document.getElementById('g-back').textContent=`${rs.backlog} 箱`
+  document.getElementById('g-back').textContent=rs.backlog
   document.getElementById('g-back').style.color=rs.backlog>0?'var(--red)':'var(--c2)'
-  document.getElementById('g-pipe').textContent=`${rs.pipeline[0]+rs.pipeline[1]} 箱`
-  document.getElementById('g-rank-badge').textContent=`$${cash.toFixed(0)}`
-  document.getElementById('g-rank-badge').style.color=cash>=STARTING_CAPITAL?'var(--grn)':cash>0?'var(--yel)':'var(--red)'
+  document.getElementById('g-pipe').textContent=rs.pipeline[0]+rs.pipeline[1]
 
-  // 決策提示
-  const sug=Math.max(0,Math.round(12-rs.inventory-(rs.pipeline[0]+rs.pipeline[1])+rs.backlog+(GS.curve[wk-1]||4)))
-  const demandHint=SNAP?`上週需求 ${SNAP[ROLE].dem} 箱，你賣出了 ${SNAP[ROLE].sold} 箱。`:''
-  const costHint=rs.backlog>0?`⚠️ 有 ${rs.backlog} 箱積壓，你在賠錢！`:`庫存 ${rs.inventory} 箱，在途 ${rs.pipeline[0]+rs.pipeline[1]} 箱。`
-  document.getElementById('g-decision-hint').textContent=`${demandHint} ${costHint}`
+  // 決策脈絡
+  const inv=rs.inventory,pipe=rs.pipeline[0]+rs.pipeline[1],back=rs.backlog
+  const sug=Math.max(0,Math.round((GS.curve[wk-1]||4)*1.2-inv-pipe+back*0.5))
+  const ctx=back>0?`積壓 ${back} 箱（在賠錢！），庫存 ${inv} 箱，在途 ${pipe} 箱。`
+             :inv<3?`⚠️ 庫存只剩 ${inv} 箱，快補貨！在途 ${pipe} 箱。`
+             :`庫存 ${inv} 箱，在途 ${pipe} 箱，系統建議補 ${sug} 箱。`
+  document.getElementById('g-decision-ctx').textContent=ctx
 
   // 快速選鈕
   const qEl=document.getElementById('g-quick');qEl.innerHTML=''
-  ;[{l:`建議 ${sug}箱`,v:sug,cls:'pbtn-g'},{l:'4 箱',v:4,cls:'pbtn-b'},{l:'0 箱',v:0,cls:'pbtn-r'}]
+  ;[{l:`建議 ${sug} 箱`,v:sug,cls:'pbtn-g'},{l:'4 箱',v:4,cls:'pbtn-b'},{l:'0 箱',v:0,cls:'pbtn-r'}]
   .forEach(b=>{
     const btn=document.createElement('button')
     btn.className=`pbtn ${b.cls}`;btn.style.cssText='font-size:13px;padding:6px 10px'
@@ -859,13 +829,13 @@ function refreshUI(){
   else hEl.style.display='none'
 
   // 圖表
-  renderChart('ch-profit',hProfit,'#4ade80',true)
-  renderChart('ch-inv',hInv,'#38bdf8',false)
-  renderChart('ch-ord',hOrd,'#fde047',false)
-  if(hProfit.length){
-    const p=hProfit[hProfit.length-1]
-    document.getElementById('cn-profit').textContent=`$${p.toFixed(0)}`
-    document.getElementById('cn-profit').style.color=p>=STARTING_CAPITAL?'var(--grn)':p>0?'var(--yel)':'var(--red)'
+  renderChart('ch-cash',hCash,'#4ade80')
+  renderChart('ch-inv',hInv,'#38bdf8')
+  renderChart('ch-ord',hOrd,'#fde047')
+  if(hCash.length){
+    const p=hCash[hCash.length-1]
+    document.getElementById('cn-cash').textContent=`$${p.toFixed(0)}`
+    document.getElementById('cn-cash').style.color=p>=START_CAPITAL?'var(--grn)':'var(--red)'
     document.getElementById('cn-inv').textContent=hInv[hInv.length-1]+'箱'
     document.getElementById('cn-ord').textContent=hOrd[hOrd.length-1]+'箱'
   }
@@ -876,18 +846,18 @@ function refreshUI(){
   document.getElementById('g-input').focus()
 }
 
-function renderChart(id,data,color,allowNeg){
+function renderChart(id,data,color){
   const el=document.getElementById(id);el.innerHTML=''
-  const maxV=Math.max(...data.map(Math.abs),1)
-  const baseline=allowNeg?el.offsetHeight/2:0
+  const max=Math.max(...data.map(v=>Math.abs(v-START_CAPITAL)),1,50)
   for(let i=0;i<20;i++){
     const bar=document.createElement('div')
     bar.className='pbar'
     if(i<data.length){
-      const v=data[i],pct=Math.abs(v)/maxV
-      bar.style.cssText=`height:${Math.max(2,Math.round(pct*100))}%;background:${v>=0?color:'var(--red)'};opacity:${.3+.7*pct}`
+      const v=data[i],diff=v-START_CAPITAL
+      const pct=Math.abs(diff)/max
+      bar.style.cssText=`height:${Math.max(2,Math.round(pct*90)+5)}%;background:${diff>=0?color:'var(--red)'};opacity:${.3+.7*pct}`
     }else{
-      bar.style.cssText=`height:2px;background:${color};opacity:.1;align-self:flex-start`
+      bar.style.cssText=`height:4px;background:${color};opacity:.1;align-self:center`
     }
     el.appendChild(bar)
   }
@@ -907,7 +877,7 @@ function doSubmit(qty){
     const{ns,snap}=processWeek(GS,all)
     GS=ns;SNAP=snap
     const s=snap[ROLE]
-    hProfit.push(s.cash);hInv.push(s.inv);hOrd.push(s.ord)
+    hCash.push(s.cash);hInv.push(s.inv);hOrd.push(s.ord)
     if(ns.status==='done'){showDebrief();return}
     refreshUI();startTimer()
   },450)
@@ -922,32 +892,47 @@ function showDebrief(){
   document.getElementById('db-myrole').textContent=`${RCFG[ROLE].emoji} ${RCFG[ROLE].name}`
   document.getElementById('db-myrole').style.color=RCFG[ROLE].color
 
-  const res={};for(const r of ROLES)res[r]={profit:GS.roles[r].profit,sold:GS.roles[r].totalSold,hc:GS.roles[r].totalHC,sc:GS.roles[r].totalSC,h:GS.roles[r].history}
-  const myProfit=res[ROLE].profit,thr=RCFG[ROLE].threshold
-  const myCash=STARTING_CAPITAL+myProfit
+  const res={};for(const r of ROLES)res[r]={
+    cash:GS.roles[r].cash,profit:GS.roles[r].profit,
+    sold:GS.roles[r].totalSold,hc:GS.roles[r].totalHC,sc:GS.roles[r].totalSC,
+    h:GS.roles[r].history
+  }
+  const myCash=res[ROLE].cash,myProfit=res[ROLE].profit,thr=RCFG[ROLE].threshold
 
-  const profEl=document.getElementById('db-profit')
-  profEl.textContent=`$${myCash.toFixed(0)}`
-  profEl.style.color=myCash>STARTING_CAPITAL?'var(--grn)':myCash>0?'var(--yel)':'var(--red)'
+  const cashEl=document.getElementById('db-cash')
+  cashEl.textContent=`$${myCash.toFixed(0)}`
+  cashEl.style.color=myCash>START_CAPITAL?'var(--grn)':myCash>0?'var(--yel)':'var(--red)'
+
+  const changeEl=document.getElementById('db-change')
+  changeEl.textContent=(myProfit>=0?'+':'')+`$${myProfit.toFixed(0)}`
+  changeEl.style.color=myProfit>=0?'var(--grn)':'var(--red)'
 
   const vEl=document.getElementById('db-verdict')
-  if(myCash>STARTING_CAPITAL*1.7){vEl.textContent='🌟 大賺！帳戶翻倍！';vEl.style.color='var(--gold)'}
-  else if(myCash>STARTING_CAPITAL+thr){vEl.textContent='✅ 獲利！達到優秀目標！';vEl.style.color='var(--grn)'}
-  else if(myCash>STARTING_CAPITAL){vEl.textContent='⚠️ 小賺，但還能更好！';vEl.style.color='var(--yel)'}
-  else if(myCash>0){vEl.textContent='❌ 虧損，帳戶縮水了！';vEl.style.color='var(--red)'}
-  else{vEl.textContent='💸 帳戶歸零！破產了！';vEl.style.color='var(--red)'}
+  if(myCash>START_CAPITAL*1.8){vEl.textContent='🌟 大賺！帳戶翻倍！';vEl.style.color='var(--gold)'}
+  else if(myCash>=thr){vEl.textContent='✅ 達到優秀目標！';vEl.style.color='var(--grn)'}
+  else if(myCash>START_CAPITAL){vEl.textContent='⚠️ 小賺，但還能更好！';vEl.style.color='var(--yel)'}
+  else if(myCash>0){vEl.textContent='❌ 虧損，帳戶縮水了';vEl.style.color='var(--red)'}
+  else{vEl.textContent='💸 帳戶歸零！破產！';vEl.style.color='var(--red)'}
 
-  const netChange=myProfit>=0?`+$${myProfit.toFixed(0)}`:`-$${Math.abs(myProfit).toFixed(0)}`
-  document.getElementById('db-breakdown').textContent=`起始 $${STARTING_CAPITAL} → 最終 $${myCash.toFixed(0)}（${netChange}）| 收入 $${(res[ROLE].sold*SELL_PRICE).toFixed(0)} 庫存費 $${res[ROLE].hc.toFixed(0)} 缺貨罰 $${res[ROLE].sc.toFixed(0)}`
+  document.getElementById('db-breakdown').textContent=
+    `賣出收入 +$${(res[ROLE].sold*SELL_PRICE[ROLE]).toFixed(0)}  庫存費 -$${res[ROLE].hc.toFixed(0)}  缺貨罰 -$${res[ROLE].sc.toFixed(0)}`
 
-  // 需求圖
-  renderChart('db-demand-chart',GS.curve,'#fde047',false)
+  renderChart('db-demand-chart',GS.curve.map((v,i)=>{const mock=[];return v}), '#fde047')
+  // 需求圖特殊處理
+  const dcEl=document.getElementById('db-demand-chart');dcEl.innerHTML=''
+  const maxD=Math.max(...GS.curve,1)
+  GS.curve.forEach(v=>{
+    const bar=document.createElement('div');bar.className='pbar'
+    bar.style.cssText=`height:${Math.max(3,Math.round((v/maxD)*100))}%;background:#fde047;opacity:${.3+.7*(v/maxD)}`
+    dcEl.appendChild(bar)
+  })
 
-  // 排名（按利潤由高到低）
-  const sorted=[...ROLES].sort((a,b)=>(STARTING_CAPITAL+res[b].profit)-(STARTING_CAPITAL+res[a].profit))
+  // 排名（按帳戶餘額由高到低）
+  const sorted=[...ROLES].sort((a,b)=>res[b].cash-res[a].cash)
   const rEl=document.getElementById('db-rank');rEl.innerHTML=''
   sorted.forEach((role,i)=>{
     const cfg=RCFG[role],r=res[role],isMe=role===ROLE
+    const diff=r.cash-START_CAPITAL
     const div=document.createElement('div')
     div.style.cssText=`display:flex;align-items:center;gap:10px;padding:12px 14px;margin-bottom:8px;background:${isMe?'#001800':'var(--panel)'};border:${isMe?'2px solid var(--grn)':'2px solid var(--b1)'};box-shadow:3px 3px 0 #000`
     div.innerHTML=`
@@ -955,12 +940,12 @@ function showDebrief(){
       <canvas id="dr-${role}" width="28" height="34" style="width:28px;height:34px;flex-shrink:0"></canvas>
       <div style="flex:1">
         <div style="font-size:14px;color:${cfg.color}">${cfg.emoji} ${cfg.name}${isMe?' ← 你':''}</div>
-        <div style="font-size:11px;color:var(--c2);margin-top:2px">賣出 ${r.sold} 箱 / 庫存費 $${r.hc.toFixed(0)} / 缺貨罰 $${r.sc.toFixed(0)}</div>
+        <div style="font-size:11px;color:var(--c2);margin-top:2px">$${SELL_PRICE[role]}/箱・目標>$${cfg.threshold}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:16px;color:${(STARTING_CAPITAL+r.profit)>STARTING_CAPITAL?'var(--grn)':(STARTING_CAPITAL+r.profit)>0?'var(--yel)':'var(--red)'}">$${(STARTING_CAPITAL+r.profit).toFixed(0)}</div>
-        <div style="font-size:11px;color:var(--c2);margin-top:2px">${r.profit>=0?'+':''}\$${r.profit.toFixed(0)}</div>
-        ${r.profit>=cfg.threshold?'<div style="font-size:11px;color:var(--grn)">✅ 優秀</div>':''}
+        <div style="font-size:20px;color:${r.cash>START_CAPITAL?'var(--grn)':'var(--red)'}">$${r.cash.toFixed(0)}</div>
+        <div style="font-size:12px;color:var(--c2)">${diff>=0?'+':''}$${diff.toFixed(0)}</div>
+        ${r.cash>=cfg.threshold?'<div style="font-size:11px;color:var(--grn)">✅</div>':''}
       </div>
     `
     rEl.appendChild(div)
@@ -987,23 +972,20 @@ function showDebrief(){
 
   const mfgMax=Math.max(...(res.manufacturer.h.map(w=>w.ord)||[1]))
   const demMax=Math.max(...GS.curve)
-  const worstRole=sorted[sorted.length-1]
+  const bestRole=sorted[0],worstRole=sorted[sorted.length-1]
   document.getElementById('db-lesson').innerHTML=
     `消費者需求峰值只有 <b style="color:var(--c0)">${demMax}</b> 箱，<br>`+
     `但製造商最高接到 <b style="color:var(--red)">${mfgMax}</b> 箱的訂單（放大 <b style="color:var(--red)">${(mfgMax/demMax).toFixed(1)}</b> 倍）。<br><br>`+
-    `每個人都在用局部資訊做決策，所以大家都過度反應。<br>`+
-    `${RCFG[worstRole].emoji} ${RCFG[worstRole].name}利潤最低（$${res[worstRole].profit.toFixed(1)}），<br>`+
-    `這就是牛鞭效應造成的「系統性虧損」。<br><br>`+
+    `${RCFG[bestRole].emoji} ${RCFG[bestRole].name}（$${res[bestRole].cash.toFixed(0)}）表現最佳，<br>`+
+    `${RCFG[worstRole].emoji} ${RCFG[worstRole].name}（$${res[worstRole].cash.toFixed(0)}）損失最大。<br><br>`+
+    `▸ 資訊不對稱讓每層都過度反應<br>`+
     `▸ 解法：共享需求資料・縮短前置時間・協同決策`
 
-  HI.push({r:ROLE,p:myProfit,c:myCash});HI.sort((a,b)=>b.c-a.c);HI=HI.slice(0,10)
-  localStorage.setItem('bgh5',JSON.stringify(HI))
+  HI.push({r:ROLE,c:myCash});HI.sort((a,b)=>b.c-a.c);HI=HI.slice(0,10)
+  localStorage.setItem('bgh6',JSON.stringify(HI))
 }
 
-function restart(){
-  clearInterval(timerID);GS=null;ROLE=null;SNAP=null;hProfit=[];hInv=[];hOrd=[]
-  initHome();show('home')
-}
+function restart(){clearInterval(timerID);GS=null;ROLE=null;SNAP=null;hCash=[];hInv=[];hOrd=[];initHome();show('home')}
 
 document.addEventListener('DOMContentLoaded',()=>{
   initHome()
