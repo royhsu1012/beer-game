@@ -33,7 +33,7 @@ function initSocket() {
     console.log('✅ 已連線伺服器')
     // 嘗試自動重連進行中的遊戲
     const saved = sessionStorage.getItem('bgg')
-    if (saved && multiMode) {
+    if (saved) {
       const { code, name, role } = JSON.parse(saved)
       socket.emit('reconnect_game', { roomCode: code, name, role }, (res) => {
         if (res.error) { sessionStorage.removeItem('bgg'); showReconnectOverlay(false) }
@@ -107,12 +107,10 @@ function initSocket() {
     GS.roles[ROLE].inventory = mine.inv
     GS.roles[ROLE].backlog   = mine.bl
     GS.roles[ROLE].pipeline  = [0, 0]
-    // 計算本週損益
-    const sell = SELL_PRICE[ROLE]
-    const hc   = mine.inv  * HOLD_COST[ROLE]
-    const sc   = mine.bl   * SHORT_COST[ROLE]
-    const revenue = mine.sold * sell
-    const weekProfit = revenue - hc - sc
+    // 計算本週損益（使用 server 傳回的 hc/sc，加採購成本）
+    const revenue    = mine.sold * SELL_PRICE[ROLE]
+    const procurement = mine.ord * BUY_PRICE[ROLE]
+    const weekProfit = revenue - mine.hc - mine.sc - procurement
     GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
     GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
     GS.week = week + 1
@@ -143,13 +141,26 @@ function initSocket() {
   // 遊戲結束
   socket.on('game_finished', ({ results, fullHistory }) => {
     GS.status = 'done'
-    // 把其他角色資料填入 GS 供複盤用
+    // 從 fullHistory 重算每個角色的帳戶（含採購成本）
     for (const role of ROLES) {
-      if (results[role]) {
-        GS.roles[role].cash = results[role].finalCash || START_CAPITAL - results[role].totalCost
-        GS.roles[role].profit = GS.roles[role].cash - START_CAPITAL
-        GS.roles[role].history = fullHistory[role] || []
+      const hist = fullHistory[role] || []
+      let cash = START_CAPITAL, profit = 0
+      for (const w of hist) {
+        const wp = w.sold * SELL_PRICE[role] - w.hc - w.sc - w.ord * BUY_PRICE[role]
+        profit += wp
+        cash = Math.max(-1000, cash + wp)
       }
+      GS.roles[role].cash    = cash
+      GS.roles[role].profit  = profit
+      GS.roles[role].history = hist
+    }
+    // 用 server 真實需求曲線更新複盤資訊
+    if (results.demandInfo) {
+      GS.curve    = results.demandInfo.curve
+      GS.mode     = results.demandInfo.mode
+      GS.modeDesc = results.demandInfo.modeDesc || ''
+      GS.base     = results.demandInfo.base
+      GS.peak     = results.demandInfo.peak
     }
     showDebrief()
   })
@@ -394,7 +405,7 @@ function goSinglePlayer() {
 const _origDoSubmit = doSubmit
 window.doSubmit = function(qty) {
   if (!multiMode) { _origDoSubmit(qty); return }
-  qty = Math.max(0, Math.round(qty))
+  qty = Math.min(Math.max(0, Math.round(qty)), getMaxOrder())
   clearInterval(timerID)
   document.getElementById('hud-timer').classList.remove('blink')
   document.getElementById('g-az').style.display = 'none'
@@ -939,6 +950,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <div style="font-size:12px;color:var(--grn);margin-bottom:4px">[ 本週決策 ]</div>
       <div id="g-azq" style="font-size:15px;color:var(--c0);margin-bottom:6px">你要訂多少箱？</div>
       <div id="g-decision-ctx" style="font-size:12px;color:var(--c2);margin-bottom:10px;line-height:1.9;min-height:3em"></div>
+      <div id="g-budget-hint" style="font-size:11px;color:var(--c2);margin-bottom:6px"></div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <input type="number" min="0" id="g-input" class="pinput" placeholder="輸入數量" style="flex:1"/>
         <button class="pbtn pbtn-g" onclick="submitOrder()" style="font-size:15px;padding:10px 16px">確認</button>
@@ -1161,6 +1173,8 @@ const ROLES=['retailer','wholesaler','distributor','manufacturer']
 
 // 各角色定價與成本（越接近消費者售價越高，但缺貨罰款也越重）
 const SELL_PRICE={retailer:30,wholesaler:20,distributor:14,manufacturer:10}
+// 向上游進貨單價（每週下單時扣除）
+const BUY_PRICE={retailer:15,wholesaler:10,distributor:7,manufacturer:4}
 
 // 庫存費（/箱/週）：越上游庫存越貴（倉儲/原料積壓成本高）
 const HOLD_COST={
@@ -1252,7 +1266,8 @@ function processWeek(state,orders){
     const revenue=sh[r]*sell
     const hc=ia[r]*HOLD_COST[r]
     const sc=bl[r]*SHORT_COST[r]
-    const weekProfit=revenue-hc-sc
+    const procurement=orders[r]*BUY_PRICE[r]
+    const weekProfit=revenue-hc-sc-procurement
     const newProfit=state.roles[r].profit+weekProfit
     const newCash=Math.max(-1000, START_CAPITAL+newProfit)
     snap[r]={wk,recv:recv[r],dem:inc[r],sold:sh[r],inv:ia[r],bl:bl[r],ord:orders[r],
@@ -1316,8 +1331,8 @@ function initHome(){
   const el=document.getElementById('hiscore')
   if(!HI.length){el.innerHTML='<span style="color:var(--c2)">尚無紀錄，快來賺第一桶金！</span>';return}
   el.innerHTML=HI.slice(0,5).map((h,i)=>{
-    const cash=h.c||200
-    const diff=cash-200
+    const cash=h.c||START_CAPITAL
+    const diff=cash-START_CAPITAL
     return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)">
       <span>${['🥇','🥈','🥉','4.','5.'][i]} ${RCFG[h.r]?.emoji||''} ${RCFG[h.r]?.name||h.r}</span>
       <span style="color:${cash>200?'var(--grn)':'var(--red)'}">$${cash.toFixed(0)} <span style="font-size:11px;color:var(--c2)">(${diff>=0?'+':''}$${diff.toFixed(0)})</span></span>
@@ -1470,6 +1485,15 @@ function refreshUI(){
   document.getElementById('g-wait').style.display='none'
   document.getElementById('g-input').value=''
   document.getElementById('g-input').focus()
+  // 更新訂購上限提示
+  const maxOrd=getMaxOrder()
+  const cash=GS.roles[ROLE].cash
+  document.getElementById('g-input').max=maxOrd
+  const hint=document.getElementById('g-budget-hint')
+  if(hint){
+    hint.textContent=`資金 $${cash.toFixed(0)}・進價 $${BUY_PRICE[ROLE]}/箱・最多可訂 ${maxOrd} 箱`
+    hint.style.color=cash<=0?'var(--red)':'var(--c2)'
+  }
 }
 
 function renderChart(id,data,color){
@@ -1489,9 +1513,18 @@ function renderChart(id,data,color){
   }
 }
 
+function getMaxOrder(){return Math.max(0,Math.floor(GS.roles[ROLE].cash/BUY_PRICE[ROLE]))}
+
 function submitOrder(){
   const v=parseInt(document.getElementById('g-input').value)
   if(isNaN(v)||v<0)return
+  const max=getMaxOrder()
+  if(v>max){
+    document.getElementById('g-input').value=max
+    const hint=document.getElementById('g-budget-hint')
+    if(hint){hint.textContent=`⚠️ 資金不足！最多可訂 ${max} 箱`;hint.style.color='var(--red)'}
+    return
+  }
   doSubmit(v)
 }
 function doSubmit(qty){

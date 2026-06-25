@@ -2,7 +2,7 @@ const { ROLES, ROLE_COSTS, TOTAL_WEEKS, INITIAL_INVENTORY, INITIAL_PIPELINE, gen
 
 function initGameState() {
   // 每局游戏生成新的需求曲线
-  const { curve, mode, base, peak, seed } = generateDemandCurve()
+  const { curve, mode, modeDesc, base, peak, seed } = generateDemandCurve()
 
   const roles = {}
   for (const role of ROLES) {
@@ -20,11 +20,12 @@ function initGameState() {
     roles,
     pendingOrders: {},
     status: 'active',
-    demandCurve: curve,       // 每局不同的需求曲线
-    demandMode: mode,         // 季节模式（游戏结束复盘时揭露）
-    demandBase: base,
-    demandPeak: peak,
-    demandSeed: seed
+    demandCurve:    curve,
+    demandMode:     mode,
+    demandModeDesc: modeDesc,
+    demandBase:     base,
+    demandPeak:     peak,
+    demandSeed:     seed
   }
 }
 
@@ -126,16 +127,11 @@ function calculateResults(finalState) {
 
   // 复盘时揭露需求模式
   results.demandInfo = {
-    mode: finalState.demandMode,
-    curve: finalState.demandCurve,
-    base: finalState.demandBase,
-    peak: finalState.demandPeak,
-    modeLabel: {
-      summer:  '☀️ 夏季旺季型（第6-14周高峰）',
-      winter:  '❄️ 冬季旺季型（第12周后持续走高）',
-      bimodal: '📈 双峰型（两次需求高峰）',
-      shock:   '⚡ 突发冲击型（某周暴增后回落）'
-    }[finalState.demandMode]
+    mode:     finalState.demandMode,
+    modeDesc: finalState.demandModeDesc || '',
+    curve:    finalState.demandCurve,
+    base:     finalState.demandBase,
+    peak:     finalState.demandPeak,
   }
 
   return results
