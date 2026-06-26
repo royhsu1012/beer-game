@@ -1,5 +1,27 @@
 # 更新日誌 Changelog
 
+## v1.7.0 — 多人凍結修復・穩定性強化・GitHub Pages 部署
+
+### 修復
+- **多人模式凍結 bug（致命）**：第 2 週後送出訂單會永久卡住，無法進入下一回合
+  - 根本原因：`submission_progress` 事件覆寫 `g-wait` innerHTML，導致 `g-sub-n` span 消失；
+    第 2 週 `doSubmit` 嘗試讀取 `g-sub-n` 拋出 TypeError，`socket.emit` 從未執行，伺服器收不到訂單
+  - 修法：`doSubmit` 自行重建整個 `g-wait` innerHTML（含新 `g-sub-n` span），不再依賴預存 DOM 狀態
+  - 驗證：本地測試 1 人 + 3 Bot，完整跑完 20 週無凍結
+- **NotoColorEmoji 404 錯誤**：移除不存在的 CDN 字型宣告，改用系統 emoji
+- **Health endpoint CORS 錯誤**：後端 Express 加入 `Access-Control-Allow-Origin: *` middleware
+
+### 新增
+- 伺服器端 `resolveWeek()` 加入 try-catch，錯誤時 emit `server_error` 給前端
+- 前端 `server_error` handler：自動解凍 UI（顯示動作區，清除等待畫面）
+- `demo/index.html`：GitHub Pages 進入點，自動重導向至 `beer_game_demo.html`
+
+### 改善
+- 前端部署從 Netlify 遷移至 **GitHub Pages**（免費、無配額限制）
+  - 網址：`https://royhsu1012.github.io/beer-game/`
+
+---
+
 ## v1.6.0 — Pixel Art 精緻化・中文字體・需求公式升級
 
 ### 新增

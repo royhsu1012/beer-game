@@ -3,8 +3,9 @@
 ## 專案概況
 
 **GitHub Repo**: `https://github.com/royhsu1012/beer-game`
+**前端（GitHub Pages）**: `https://royhsu1012.github.io/beer-game/`
+**後端（Render）**: `https://beer-game-jnsf.onrender.com`
 **目前最新版**: `demo/beer_game_demo.html`（v20，多人房間制）
-**後端服務**: `https://beer-game-server.onrender.com`（Node.js + Socket.io，已部署於 Render）
 
 ---
 
@@ -13,14 +14,14 @@
 ```
 beer-game/
 ├── demo/
-│   └── beer_game_demo.html   ← 主遊戲（單頁 HTML，v20）
+│   ├── beer_game_demo.html   ← 主遊戲（單頁 HTML）
+│   └── index.html            ← GitHub Pages 重導向入口
 ├── server/
 │   └── src/
 │       ├── index.js          ← Express + Socket.io 主程式
 │       ├── RoomManager.js    ← 房間管理（建立/加入/選角色）
 │       ├── GameEngine.js     ← 遊戲引擎（processWeek, calculateResults）
 │       └── gameConfig.js     ← 遊戲常數 + 需求曲線生成器
-├── client/                   ← React 前端（尚未完成，暫不使用）
 └── docs/
 ```
 
@@ -29,27 +30,26 @@ beer-game/
 ## 遊戲設計核心
 
 ### 各角色成本結構
-| 角色 | 售價 | 庫存費 | 缺貨罰 | 特色 |
-|------|------|--------|--------|------|
-| 零售商 | $3.00 | $0.10 | $1.00 | 缺貨最貴，傾向多備貨 |
-| 批發商 | $2.00 | $0.15 | $0.70 | 兩者平衡 |
-| 分銷商 | $1.40 | $0.20 | $0.50 | 庫存壓力漸增 |
-| 製造商 | $1.00 | $0.30 | $0.30 | 庫存最貴，平穩生產最重要 |
+| 角色 | 持有成本 | 缺貨成本 | 特色 |
+|------|----------|----------|------|
+| 零售商 | $1/箱/週 | $10/箱/週 | 缺貨最貴，傾向多備貨 |
+| 批發商 | $2/箱/週 | $7/箱/週 | 兩者平衡 |
+| 分銷商 | $2/箱/週 | $5/箱/週 | 庫存壓力漸增 |
+| 製造商 | $3/箱/週 | $3/箱/週 | 庫存最貴，平穩生產最重要 |
 
-- 起始資金：**$200**（各角色相同）
-- 遊戲 **20 週**，每週 **60 秒**決策
+- 遊戲 **20 週**，每週 **60 秒** 決策
 - 前置時間 **2 週**，資訊隔離（各角色只看自己的數據）
+- 期初庫存：12 箱，期初在途：各 4 箱
+- 團隊勝利條件：四人總成本 < $700
 
-### 需求公式（v20）
-- base: 4-7，amp1: 3-6，保證至少 1 次衝擊（最多 3 次）
-- 衝擊強度: 4-10
+### 需求公式
+- base: 4-7，amp1: 3-6，保證至少 1 次衝擊（最多 3 次），衝擊強度: 4-10
 
 ### 建議訂購量公式
 ```
 建議量 = 目標庫存 − 現有庫存 − 在途 + 積壓
 目標庫存 = 近3週平均收到的需求 × 1.5
 ```
-各角色只用自己歷史收到的需求，保護資訊隔離。
 
 ---
 
@@ -60,84 +60,73 @@ beer-game/
 |------|---------|------|
 | `create_room` | `{ name }` | 建立房間 |
 | `join_room` | `{ roomCode, name }` | 加入房間 |
-| `select_role` | `{ roomCode, role }` | 選角色（防重複） |
+| `add_bot` / `remove_bot` | `{ roomCode, role }` | 新增/移除 Bot |
+| `select_role` / `deselect_role` | `{ roomCode, role }` | 選角色 |
 | `start_game` | `{ roomCode }` | 開始遊戲（房主限定） |
 | `submit_order` | `{ quantity }` | 提交本週訂單 |
+| `reconnect_game` | `{ roomCode, name }` | 斷線重連 |
+| `return_to_room` | `{ roomCode }` | 房主重開遊戲室 |
 
 ### 後端 → 前端
 | 事件 | 說明 |
 |------|------|
-| `room_updated` | 房間狀態更新（玩家列表、角色） |
-| `game_started` | 遊戲開始，包含初始狀態 |
-| `week_started` | 新週開始 |
-| `week_results` | 週結算，**只傳自己角色的數據** |
-| `submission_progress` | 已提交人數 |
-| `game_finished` | 遊戲結束，包含所有角色結果 |
-| `player_disconnected` | 有玩家斷線 |
+| `room_updated` | 等待室狀態更新（玩家列表、角色） |
+| `game_started` | 遊戲開始，含個人初始狀態 |
+| `week_started` | 新回合開始，含最新庫存狀態 |
+| `week_results` | 本週結算，**只傳自己角色的數據** |
+| `submission_progress` | 已提交人數進度 |
+| `game_finished` | 遊戲結束，揭露所有角色結果 |
+| `server_error` | 伺服器錯誤通知，前端自動解凍 UI |
+| `room_reset` | 房主重開遊戲室 |
+| `host_left` | 房主離開複盤頁 |
+| `player_disconnected` | 玩家斷線通知 |
+| `game_resumed` | 斷線重連成功，恢復遊戲狀態 |
 
 ---
 
 ## 已知待辦事項
 
-1. **GameEngine.js 的成本結構** 目前還是 `HOLDING_COST=0.50`（單一值），
-   前端 HTML 已改成各角色不同，但後端還沒同步 → **需要更新 GameEngine.js**
+1. **GameEngine.js 成本結構** 目前 `HOLDING_COST` 為單一值，
+   前端 HTML 已改各角色不同 → **需要同步更新 GameEngine.js**
 
-2. **需求波動** gameConfig.js 的參數還是舊版（base 3.5-5.5），
-   前端 HTML 已改大 → **需要更新 gameConfig.js**
+2. **gameConfig.js 需求參數** 目前可能仍是舊版參數，
+   前端 HTML 已改大 → **可驗證並更新 gameConfig.js**
 
-3. **複盤頁** 多人模式下的複盤資料來自 `game_finished` 事件，
-   目前只填了 cash/profit，**orderHistory 的牛鞭效應圖還需測試**
+3. **多人複盤牛鞭效應圖** `orderHistory` 折線圖在多人模式下需完整測試
 
-4. **斷線重連** 玩家斷線後目前直接通知其他人，
-   尚未實作重連機制
+4. **斷線重連** 已實作（60秒內重連恢復，逾時由 Bot 接管），但邊界情況未完整測試
+
+---
+
+## 重要 Bug 紀錄（已修復）
+
+### 多人凍結（v1.7.0 修復）
+- **症狀**：第 2 週後送出訂單，畫面停在「已提交 等待其他玩家 1/1」永不推進
+- **根因**：`submission_progress` handler 覆寫 `g-wait` innerHTML，移除了 `g-sub-n` span；
+  下一週 `doSubmit` 嘗試讀取 `g-sub-n` 拋出 TypeError，`socket.emit` 從未執行
+- **修法**：`doSubmit` 改為自行重建整個 `g-wait` HTML（含新 `g-sub-n`），不依賴舊 DOM
 
 ---
 
 ## 如何在 Claude Code 繼續
 
-### 1. Clone 專案
+### 1. 啟動後端（本地測試）
 ```bash
-git clone https://github.com/royhsu1012/beer-game.git
-cd beer-game
+cd "C:/Users/royhs_hsu/OneDrive - Moxa Inc/beer-game/server"
+node src/index.js   # 啟動於 http://localhost:8080
 ```
 
-### 2. 啟動後端（本地測試）
-```bash
-cd server
-npm install
-npm run dev   # nodemon，port 8080
-```
+### 2. 修改前端
+直接編輯 `demo/beer_game_demo.html`。
+本地測試時，將檔案頂部 `SERVER_URL` 改為 `http://localhost:8080`；
+完成後務必改回 `https://beer-game-jnsf.onrender.com`。
 
-### 3. 修改前端
-直接編輯 `demo/beer_game_demo.html`，用瀏覽器開啟即可。
-如果要連本地後端，把 `SERVER_URL` 改成 `http://localhost:8080`。
+### 3. 部署
+- **前端**：push 到 main branch，GitHub Pages 自動更新（約 1 分鐘）
+- **後端**：push 到 main branch，Render auto-deploy 自動重新部署
 
-### 4. 部署到 Render（後端）
-- Render Dashboard 已設定 auto-deploy
-- push 到 main branch 後自動部署
-- 環境變數：`PORT=8080`
-
-### 5. 部署前端
-把 `demo/beer_game_demo.html` 放到 GitHub Pages 或直接用 Vercel 托管。
-
----
-
-## Claude Code 推薦提示詞
-
-開始新對話時，貼上：
-
-```
-我在繼續開發啤酒供應鏈遊戲（牛鞭效應教學模擬）。
-請先讀取 CLAUDE_CODE_HANDOFF.md 了解專案背景。
-
-主要工作：
-1. 更新 server/src/GameEngine.js，讓各角色使用不同的 HOLD_COST 和 SHORT_COST
-2. 更新 server/src/gameConfig.js，加大需求波動參數
-3. 測試多人模式的完整流程（建房→選角色→遊戲→複盤）
-
-後端: server/ (Node.js + Socket.io)
-前端: demo/beer_game_demo.html (單頁 HTML)
-```
+### 4. 防止 Render 休眠
+伺服器端已內建每 14 分鐘自動 ping `/health`，無需額外設定。
 
 ---
 
