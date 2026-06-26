@@ -290,43 +290,14 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       </div>
       <div style="font-size:13px;color:var(--grn);margin-bottom:8px"><span class="emoji">💰</span> 你的帳戶怎麼算？</div>
       <div style="font-size:12px;line-height:2.1;margin-bottom:10px">
-        <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold)">$20000</b></div>
+        <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold)" class="start-capital-display"></b></div>
         <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
         <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
         <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
         <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
       </div>
       <div style="font-size:12px;color:var(--c2);margin-bottom:6px">各角色的成本結構不同：</div>
-      <div style="font-size:12px;line-height:2.2">
-        <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center">
-          <span style="color:var(--c2)">角色</span>
-          <span style="color:var(--c2);text-align:right">賣價</span>
-          <span style="color:var(--pur);text-align:right">進貨/生產</span>
-          <span style="color:var(--yel);text-align:right">庫存費</span>
-          <span style="color:var(--red);text-align:right">缺貨罰</span>
-          <span><span class="emoji">🏪</span> 零售</span>
-          <b style="color:var(--blue);text-align:right">$30</b>
-          <span style="color:var(--pur);text-align:right">$20</span>
-          <span style="color:var(--yel);text-align:right">$1</span>
-          <span style="color:var(--red);text-align:right">$10</span>
-          <span><span class="emoji">📦</span> 批發</span>
-          <b style="color:var(--grn);text-align:right">$20</b>
-          <span style="color:var(--pur);text-align:right">$11</span>
-          <span style="color:var(--yel);text-align:right">$2</span>
-          <span style="color:var(--red);text-align:right">$7</span>
-          <span><span class="emoji">🚛</span> 分銷</span>
-          <b style="color:var(--yel);text-align:right">$14</b>
-          <span style="color:var(--pur);text-align:right">$5</span>
-          <span style="color:var(--yel);text-align:right">$2</span>
-          <span style="color:var(--red);text-align:right">$5</span>
-          <span><span class="emoji">🏭</span> 製造</span>
-          <b style="color:var(--red);text-align:right">$10</b>
-          <span style="color:var(--pur);text-align:right">$2*</span>
-          <span style="color:var(--yel);text-align:right">$3</span>
-          <span style="color:var(--red);text-align:right">$3</span>
-        </div>
-        <div style="font-size:11px;color:var(--c2);margin-top:6px">* 製造商為生產成本（原料＋人力），非進貨價</div>
-      </div>
+      <div class="cost-table-container"></div>
     </div>
   </div>
 
@@ -372,7 +343,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <span class="emoji">💰</span> 你的帳戶怎麼算？
     </div>
     <div style="font-size:13px;line-height:2.3">
-      <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px">$20000</b></div>
+      <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px" class="start-capital-display"></b></div>
       <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
       <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
       <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
@@ -380,36 +351,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     </div>
     <div class="pdiv" style="margin:8px 0"></div>
     <div style="font-size:12px;color:var(--c2);margin-bottom:6px">各角色的成本結構不同：</div>
-    <div style="font-size:12px;line-height:2.2">
-      <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center">
-        <span style="color:var(--c2)">角色</span>
-        <span style="color:var(--c2);text-align:right">賣價</span>
-        <span style="color:var(--pur);text-align:right">進貨價</span>
-        <span style="color:var(--yel);text-align:right">庫存費</span>
-        <span style="color:var(--red);text-align:right">缺貨罰</span>
-        <span><span class="emoji">🏪</span> 零售</span>
-        <b style="color:var(--blue);text-align:right">$30</b>
-        <span style="color:var(--pur);text-align:right">$20</span>
-        <span style="color:var(--yel);text-align:right">$1</span>
-        <span style="color:var(--red);text-align:right">$10</span>
-        <span><span class="emoji">📦</span> 批發</span>
-        <b style="color:var(--grn);text-align:right">$20</b>
-        <span style="color:var(--pur);text-align:right">$11</span>
-        <span style="color:var(--yel);text-align:right">$2</span>
-        <span style="color:var(--red);text-align:right">$7</span>
-        <span><span class="emoji">🚛</span> 分銷</span>
-        <b style="color:var(--yel);text-align:right">$14</b>
-        <span style="color:var(--pur);text-align:right">$5</span>
-        <span style="color:var(--yel);text-align:right">$2</span>
-        <span style="color:var(--red);text-align:right">$5</span>
-        <span><span class="emoji">🏭</span> 製造</span>
-        <b style="color:var(--red);text-align:right">$10</b>
-        <span style="color:var(--pur);text-align:right">$2*</span>
-        <span style="color:var(--yel);text-align:right">$3</span>
-        <span style="color:var(--red);text-align:right">$3</span>
-      </div>
-      <div style="font-size:11px;color:var(--c2);margin-top:6px">* 製造商為生產成本（原料＋人力），非進貨價</div>
-    </div>
+    <div class="cost-table-container"></div>
   </div>
 
   <!-- 角色列表 -->
@@ -1010,6 +952,30 @@ function enterRoom() {
   document.getElementById('lobby-mug') && drawMug('lobby-mug')
 }
 
+function renderCostTables() {
+  const NAME = {retailer:'零售',wholesaler:'批發',distributor:'分銷',manufacturer:'製造'}
+  const EMOJ = {retailer:'🏪',wholesaler:'📦',distributor:'🚛',manufacturer:'🏭'}
+  const COL  = {retailer:'var(--blue)',wholesaler:'var(--grn)',distributor:'var(--yel)',manufacturer:'var(--red)'}
+  const rows = ROLES.map(r =>
+    `<span><span class="emoji">${EMOJ[r]}</span> ${NAME[r]}</span>` +
+    `<b style="color:${COL[r]};text-align:right">$${SELL_PRICE[r]}</b>` +
+    `<span style="color:var(--pur);text-align:right">$${BUY_PRICE[r]}${r==='manufacturer'?'*':''}</span>` +
+    `<span style="color:var(--yel);text-align:right">$${HOLD_COST[r]}</span>` +
+    `<span style="color:var(--red);text-align:right">$${SHORT_COST[r]}</span>`
+  ).join('')
+  const html =
+    `<div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center;font-size:12px;line-height:2.2">` +
+    `<span style="color:var(--c2)">角色</span>` +
+    `<span style="color:var(--c2);text-align:right">賣價</span>` +
+    `<span style="color:var(--pur);text-align:right">進貨/生產</span>` +
+    `<span style="color:var(--yel);text-align:right">庫存費</span>` +
+    `<span style="color:var(--red);text-align:right">缺貨罰</span>` +
+    rows + `</div>` +
+    `<div style="font-size:11px;color:var(--c2);margin-top:6px">* 製造商為生產成本（原料＋人力），非進貨價</div>`
+  document.querySelectorAll('.cost-table-container').forEach(el => el.innerHTML = html)
+  document.querySelectorAll('.start-capital-display').forEach(el => el.textContent = `$${START_CAPITAL.toLocaleString()}`)
+}
+
 function toggleRules() {
   const panel = document.getElementById('rules-panel')
   const arrow = document.getElementById('rules-arrow')
@@ -1290,7 +1256,7 @@ const RCFG={
   retailer:{
     name:'零售商',emoji:'🏪',color:'var(--blue)',
     title:'直接面對消費者的超市老闆',
-    mission:'你的超市每週賣啤酒給消費者。\n消費者需求每週變化，你必須備好庫存！\n每箱賣出 $3.00，但囤太多或缺貨都會虧錢。',
+    mission:`你的超市每週賣啤酒給消費者。\n每箱賣出 $${SELL_PRICE.retailer}，進貨成本 $${BUY_PRICE.retailer}，毛利 $${SELL_PRICE.retailer-BUY_PRICE.retailer}。\n消費者需求每週變化，缺貨罰比庫存費更貴！`,
     see:['消費者本週需求量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','上游任何資訊','下週需求'],
     target:'起始 $2000，優秀目標：帳戶 > $3500\n（理性策略可達 $4000-5000）',
@@ -1302,7 +1268,7 @@ const RCFG={
   wholesaler:{
     name:'批發商',emoji:'📦',color:'var(--grn)',
     title:'服務零售商的倉儲公司老闆',
-    mission:'你的公司批發啤酒給零售商。\n每箱賣出 $2.00，成本比零售商低，但資訊也更少。\n小心：零售商的訂單可能比真實需求誇大很多！',
+    mission:`你的公司批發啤酒給零售商。\n每箱賣出 $${SELL_PRICE.wholesaler}，進貨成本 $${BUY_PRICE.wholesaler}，毛利 $${SELL_PRICE.wholesaler-BUY_PRICE.wholesaler}。\n小心：零售商訂單可能比真實需求誇大很多！`,
     see:['零售商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['零售商庫存','消費者真實需求','分銷商庫存'],
     target:'起始 $2000，優秀目標：帳戶 > $2800\n（理性策略可達 $3000-4000）',
@@ -1314,7 +1280,7 @@ const RCFG={
   distributor:{
     name:'分銷商',emoji:'🚛',color:'var(--yel)',
     title:'連結工廠與批發商的物流公司老闆',
-    mission:'你的物流公司每箱賣 $1.40，沒有進貨成本。\n但你的訂單已被放大兩層，波動很劇烈！\n成為供應鏈的穩定器，你就能保住利潤。',
+    mission:`你的物流公司每箱賣 $${SELL_PRICE.distributor}，進貨成本 $${BUY_PRICE.distributor}，毛利 $${SELL_PRICE.distributor-BUY_PRICE.distributor}。\n訂單已被放大兩層，波動很劇烈！\n成為供應鏈的穩定器，你就能保住利潤。`,
     see:['批發商本週訂單量','自己的庫存','積壓訂單','在途貨物'],
     blind:['批發商庫存','零售商資訊','消費者需求'],
     target:'起始 $2000，優秀目標：帳戶 > $2400\n（理性策略可達 $2800-3300）',
@@ -1326,7 +1292,7 @@ const RCFG={
   manufacturer:{
     name:'製造商',emoji:'🏭',color:'var(--red)',
     title:'啤酒工廠老闆，供應鏈的源頭',
-    mission:'你的工廠每箱賣 $10，每箱生產成本 $2（含原料+人力）。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。',
+    mission:`你的工廠每箱賣 $${SELL_PRICE.manufacturer}，生產成本 $${BUY_PRICE.manufacturer}（原料+人力），毛利 $${SELL_PRICE.manufacturer-BUY_PRICE.manufacturer}。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。`,
     see:['分銷商本週訂單量','成品庫存','生產線數量','積壓訂單'],
     blind:['分銷商庫存','下游一切','消費者需求'],
     target:'起始 $2000，優秀目標：帳戶 > $2200\n（理性策略可達 $2500-3000）',
@@ -1882,6 +1848,7 @@ function restart(){
 }
 
 document.addEventListener('DOMContentLoaded',()=>{
+  renderCostTables()
   initHome()
   drawMug('lobby-mug')
   document.getElementById('g-input').addEventListener('keydown',e=>{if(e.key==='Enter')submitOrder()})
