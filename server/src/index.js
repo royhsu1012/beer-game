@@ -210,7 +210,7 @@ io.on('connection', (socket) => {
     if (!found) return cb({ error: 'PLAYER_NOT_FOUND' })
     const { room, code, player } = found
     const result = submitOrder(code, player.role, quantity)
-    if (result.error) return cb({ error: result.error })
+    if (result.error) return cb({ error: result.error, maxOrder: result.maxOrder })
     io.to(code).emit('submission_progress', {
       submittedCount: result.submittedCount,
       totalPlayers: result.totalPlayers

@@ -1,7 +1,22 @@
 const { initGameState } = require('./GameEngine')
-const { ROLES } = require('./gameConfig')
+const { ROLES, START_CAPITAL, SELL_PRICE, BUY_PRICE } = require('./gameConfig')
 
 const rooms = new Map()
+
+// 從已結算的週歷史即時算出該角色目前現金（與前端帳戶公式一致）
+// 現金 = 起始資金 + Σ(賣出×售價 − 庫存費 − 缺貨罰 − 下單×進價)
+function roleCash(roleState, role) {
+  let cash = START_CAPITAL
+  for (const w of roleState.weeklyHistory) {
+    cash += w.sold * SELL_PRICE[role] - w.hc - w.sc - w.ord * BUY_PRICE[role]
+  }
+  return cash
+}
+
+// 本週預算上限：最多可訂 = max(0, floor(現金 / 進價))，與前端 getMaxOrder 相同
+function maxAffordableOrder(roleState, role) {
+  return Math.max(0, Math.floor(roleCash(roleState, role) / BUY_PRICE[role]))
+}
 
 function generateRoomCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -126,6 +141,9 @@ function submitOrder(code, role, quantity) {
   if (!room || room.status !== 'playing') return { error: 'GAME_NOT_ACTIVE' }
   if (room.gameState.pendingOrders[role] !== undefined) return { error: 'ALREADY_SUBMITTED' }
   if (!Number.isInteger(quantity) || quantity < 0) return { error: 'INVALID_QUANTITY' }
+  // 預算上限：擋惡意/越界下單（前端已先夾，正常玩家不會觸發）
+  const maxOrder = maxAffordableOrder(room.gameState.roles[role], role)
+  if (quantity > maxOrder) return { error: 'ORDER_EXCEEDS_BUDGET', maxOrder }
   room.gameState.pendingOrders[role] = quantity
   const humanRoles = room.players.filter(p => !p.isBot).map(p => p.role)
   const submittedCount = humanRoles.filter(r => room.gameState.pendingOrders[r] !== undefined).length

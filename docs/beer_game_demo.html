@@ -792,7 +792,7 @@ function initSocket() {
       const weekProfit  = revenue - mine.hc - mine.sc - procurement
       GS.roles[ROLE].inventory = mine.inv
       GS.roles[ROLE].backlog   = mine.bl
-      GS.roles[ROLE].cash   = Math.max(-1000, (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit)
+      GS.roles[ROLE].cash   = (GS.roles[ROLE].cash || START_CAPITAL) + weekProfit
       GS.roles[ROLE].profit = (GS.roles[ROLE].profit || 0) + weekProfit
       GS.roles[ROLE].history = GS.roles[ROLE].history || []
       GS.roles[ROLE].history.push({
@@ -853,7 +853,7 @@ function initSocket() {
       for (const w of hist) {
         const wp = w.sold * SELL_PRICE[role] - w.hc - w.sc - w.ord * BUY_PRICE[role]
         profit += wp
-        cash = Math.max(-1000, cash + wp)
+        cash = cash + wp
       }
       GS.roles[role].cash      = cash
       GS.roles[role].profit    = profit
@@ -1334,7 +1334,7 @@ function processWeek(state,orders){
     const procurement=orders[r]*BUY_PRICE[r]
     const weekProfit=revenue-hc-sc-procurement
     const newProfit=state.roles[r].profit+weekProfit
-    const newCash=Math.max(-1000, START_CAPITAL+newProfit)
+    const newCash=START_CAPITAL+newProfit
     snap[r]={wk,recv:recv[r],dem:inc[r],sold:sh[r],inv:ia[r],bl:bl[r],ord:orders[r],
              revenue,hc,sc,weekProfit,profit:newProfit,cash:newCash}
     nr[r]={inventory:ia[r],backlog:bl[r],pipeline:[state.roles[r].pipeline[1],orders[r]],
@@ -1612,9 +1612,13 @@ function doSubmit(qty){
   if(multiMode){
     socket.emit('submit_order',{quantity:qty},(res)=>{
       if(res.error){
+        submitting=false
         document.getElementById('g-wait').style.display='none'
         document.getElementById('g-az').style.display='block'
-        showRoomErr('提交失敗：'+res.error)
+        const msg = res.error==='ORDER_EXCEEDS_BUDGET'
+          ? `資金不足！最多可訂 ${res.maxOrder} 箱`
+          : '提交失敗：'+res.error
+        showRoomErr(msg)
       }
     })
     return

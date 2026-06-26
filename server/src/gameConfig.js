@@ -118,6 +118,10 @@ const GAME_CONFIG = {
   LEAD_TIME:         2,        // 前置時間（週）
   INITIAL_INVENTORY: 12,       // 期初庫存（各角色相同）
   INITIAL_PIPELINE:  [0, 0],   // 期初在途 [下週到, 後週到]
+  START_CAPITAL:     2000,     // 起始資金（帳戶/預算上限用，須與前端一致）
+  // 各角色售價與進貨/生產成本（與前端 docs/beer_game_demo.html 一致）
+  SELL_PRICE: { retailer: 30, wholesaler: 20, distributor: 14, manufacturer: 10 },
+  BUY_PRICE:  { retailer: 18, wholesaler: 13, distributor: 10, manufacturer:  8 },
   // 各角色不同成本結構（整數，/箱/週）
   ROLE_COSTS: {
     retailer:     { holding: 3, shortage: 6 },
