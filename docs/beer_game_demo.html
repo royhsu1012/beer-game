@@ -1236,12 +1236,12 @@ const HOLD_COST={
   distributor: 2,  // 物流中心倉租
   manufacturer:1,  // 工廠倉庫空間大，庫存費最低
 }
-// 缺貨罰款（/箱/週）：越接近消費者缺貨越貴（直接失去顧客）
+// 缺貨罰款（/箱/週）：庫存費 × 2，越接近消費者缺貨越貴
 const SHORT_COST={
-  retailer:    10,  // 顧客跑掉，損失最大
-  wholesaler:   7,  // 零售商抱怨，關係受損
-  distributor:  5,  // 批發商延誤
-  manufacturer: 3,  // 分銷商等一等還好
+  retailer:    6,  // 庫存費3 × 2
+  wholesaler:  4,  // 庫存費2 × 2
+  distributor: 4,  // 庫存費2 × 2
+  manufacturer:2,  // 庫存費1 × 2
 }
 
 const RCFG={
