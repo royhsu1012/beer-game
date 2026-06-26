@@ -5,7 +5,7 @@
 **GitHub Repo**: `https://github.com/royhsu1012/beer-game`
 **前端（GitHub Pages）**: `https://royhsu1012.github.io/beer-game/`
 **後端（Render）**: `https://beer-game-jnsf.onrender.com`
-**目前最新版**: `demo/beer_game_demo.html`（v20，多人房間制）
+**目前最新版**: `docs/beer_game_demo.html`（多人房間制 + 單人 AI 模式）
 
 ---
 
@@ -13,9 +13,11 @@
 
 ```
 beer-game/
-├── demo/
+├── docs/
 │   ├── beer_game_demo.html   ← 主遊戲（單頁 HTML）
-│   └── index.html            ← GitHub Pages 重導向入口
+│   ├── index.html            ← GitHub Pages 重導向入口
+│   ├── ARCHITECTURE.md       ← 系統架構說明
+│   └── GAMEPLAY.md           ← 遊戲規則說明
 ├── server/
 │   └── src/
 │       ├── index.js          ← Express + Socket.io 主程式
@@ -29,18 +31,24 @@ beer-game/
 
 ## 遊戲設計核心
 
-### 各角色成本結構
-| 角色 | 持有成本 | 缺貨成本 | 特色 |
-|------|----------|----------|------|
-| 零售商 | $1/箱/週 | $10/箱/週 | 缺貨最貴，傾向多備貨 |
-| 批發商 | $2/箱/週 | $7/箱/週 | 兩者平衡 |
-| 分銷商 | $2/箱/週 | $5/箱/週 | 庫存壓力漸增 |
-| 製造商 | $3/箱/週 | $3/箱/週 | 庫存最貴，平穩生產最重要 |
+### 各角色定價與成本
+
+| 角色 | 賣價 | 進貨/生產 | 毛利率 | 持有費 | 缺貨罰 |
+|------|------|-----------|--------|--------|--------|
+| 零售商 | $30 | $18 | 40% | $3/週 | $6/週 |
+| 批發商 | $20 | $13 | 35% | $2/週 | $4/週 |
+| 分銷商 | $14 | $10 | 29% | $2/週 | $4/週 |
+| 製造商 | $10 | $8 | 20% | $1/週 | $2/週 |
+
+設計原則：
+- 毛利率：零售 > 批發 > 分銷 > 製造（越近消費者定價權越高）
+- 持有成本：零售最高（賣場空間貴），製造最低（工廠倉庫便宜）
+- 缺貨罰 = 持有費 × 2（統一 1:2 比例）
+- 起始資金：$2000
 
 - 遊戲 **20 週**，每週 **60 秒** 決策
 - 前置時間 **2 週**，資訊隔離（各角色只看自己的數據）
-- 期初庫存：12 箱，期初在途：各 4 箱
-- 團隊勝利條件：四人總成本 < $700
+- 期初庫存：12 箱，期初在途：[0, 0]（第 1-2 週無到貨，考驗初期備貨判斷）
 
 ### 需求公式
 - base: 4-7，amp1: 3-6，保證至少 1 次衝擊（最多 3 次），衝擊強度: 4-10
@@ -117,7 +125,7 @@ node src/index.js   # 啟動於 http://localhost:8080
 ```
 
 ### 2. 修改前端
-直接編輯 `demo/beer_game_demo.html`。
+直接編輯 `docs/beer_game_demo.html`。
 本地測試時，將檔案頂部 `SERVER_URL` 改為 `http://localhost:8080`；
 完成後務必改回 `https://beer-game-jnsf.onrender.com`。
 
@@ -132,7 +140,7 @@ node src/index.js   # 啟動於 http://localhost:8080
 
 ## 重要檔案路徑
 
-- 主遊戲 HTML：`demo/beer_game_demo.html`
+- 主遊戲 HTML：`docs/beer_game_demo.html`
 - 後端入口：`server/src/index.js`
 - 遊戲引擎：`server/src/GameEngine.js`
 - 需求配置：`server/src/gameConfig.js`

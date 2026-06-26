@@ -5,7 +5,7 @@
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    玩家端（瀏覽器）                        │
-│  demo/beer_game_demo.html（單一 HTML 檔案）               │
+│  docs/beer_game_demo.html（單一 HTML 檔案）               │
 │  Canvas Pixel Art・Cubic 11 字體・Web Audio API          │
 │  Socket.io-client（多人模式）                             │
 └──────────────────────────┬────────────────────────────────┘
@@ -22,7 +22,7 @@
 ```
 
 **部署：**
-- 前端：GitHub Pages（`demo/` 目錄）
+- 前端：GitHub Pages（`docs/` 目錄）
 - 後端：Render 免費方案
 
 ---
@@ -50,7 +50,7 @@ room.players.filter(p => !p.isBot).forEach(player => {
 GameEngine.js
 │
 ├── initGameState()
-│   └── 初始化四角色狀態（庫存12、積壓0、管道[4,4]）
+│   └── 初始化四角色狀態（庫存12、積壓0、管道[0,0]）
 │   └── 用 generateDemandCurve() 生成本局需求曲線
 │
 ├── processWeek(state, orders) → { newState, weekSnapshot, consumerDemand }
