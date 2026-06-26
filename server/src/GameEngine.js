@@ -106,35 +106,17 @@ function processWeek(state, orders) {
 }
 
 function calculateResults(finalState) {
-  const results = {}
-  let teamTotal = 0
-
-  for (const role of ROLES) {
-    const history = finalState.roles[role].weeklyHistory
-    const totalCost = finalState.roles[role].cumulativeCost
-    const shortageWeeks = history.filter(w => w.bl > 0).length
-    const orders = history.map(w => w.ord)
-    const avg = orders.reduce((a, b) => a + b, 0) / orders.length
-    const orderSD = Math.sqrt(orders.reduce((s, o) => s + Math.pow(o - avg, 2), 0) / orders.length)
-    teamTotal += totalCost
-    results[role] = { totalCost, shortageWeeks, orderSD, history }
+  // 複盤時前端只需要需求模式揭曉；各角色最終帳戶由前端從 fullHistory 自行重算
+  // （含營收與採購成本的帳戶/利潤模型，非單純成本加總）
+  return {
+    demandInfo: {
+      mode:     finalState.demandMode,
+      modeDesc: finalState.demandModeDesc || '',
+      curve:    finalState.demandCurve,
+      base:     finalState.demandBase,
+      peak:     finalState.demandPeak,
+    }
   }
-
-  const sorted = [...ROLES].sort((a, b) => results[a].totalCost - results[b].totalCost)
-  sorted.forEach((role, i) => { results[role].rank = i + 1 })
-  results.teamTotal = teamTotal
-  results.teamWin = teamTotal < 700
-
-  // 复盘时揭露需求模式
-  results.demandInfo = {
-    mode:     finalState.demandMode,
-    modeDesc: finalState.demandModeDesc || '',
-    curve:    finalState.demandCurve,
-    base:     finalState.demandBase,
-    peak:     finalState.demandPeak,
-  }
-
-  return results
 }
 
 module.exports = { initGameState, processWeek, calculateResults }

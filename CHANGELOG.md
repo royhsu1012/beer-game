@@ -1,5 +1,14 @@
 # 更新日誌 Changelog
 
+## v1.8.1 — 清理與多人模式標示
+
+### 清理
+- **移除廢棄的 `client/` React 版前端**：該版為半成品（多個元件為空檔、欄位與後端 `week_results` 不符），且從未部署。實際部署前端為 `docs/beer_game_demo.html`。如需 React 版可從 git 歷史還原。
+- **移除已脫鉤的 server 端勝負/排名死碼**：`calculateResults` 原算的 `teamWin`（門檻 `< 700`，舊成本模型殘留，實際幾乎不可能達成）、`teamTotal`、`rank`、`shortageWeeks`、`orderSD` 從未被現行前端讀取——前端改用帳戶/利潤模型自 `fullHistory` 重算。一併移除 `gameConfig.js` 中全專案未引用的 `EXCELLENT_THRESHOLD`。`calculateResults` 現只回傳前端真正使用的 `demandInfo`。
+
+### 新增功能
+- **多人房間模式橫幅**：等待室頂部顯示「👥 多人連線模式」，並依身分標示「👑 房主」或「🙋 玩家」，與單人模式標籤一致。
+
 ## v1.8.0 — 遊戲平衡重設計・UI 精簡
 
 ### 平衡調整

@@ -250,6 +250,12 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 <div id="s-room" class="screen">
 <div style="padding:14px 12px">
 
+  <!-- 模式橫幅（多人 + 房主/玩家身分） -->
+  <div class="pbox" style="padding:12px 14px;text-align:center;margin-bottom:14px">
+    <div style="font-size:16px;color:var(--c0)">👥 多人連線模式</div>
+    <div id="room-role-label" style="font-size:12px;color:var(--c2);margin-top:4px"></div>
+  </div>
+
   <div class="pbox" style="padding:14px;text-align:center;margin-bottom:14px">
     <div style="font-size:12px;color:var(--c2);margin-bottom:8px">房間代碼（分享給朋友）</div>
     <div class="room-code" id="room-code-display">------</div>
@@ -939,6 +945,12 @@ function doJoinRoom() {
 
 function enterRoom() {
   document.getElementById('room-code-display').textContent = myRoomCode
+  const roleLabel = document.getElementById('room-role-label')
+  if (roleLabel) {
+    roleLabel.innerHTML = isHost
+      ? '👑 你是<b style="color:var(--gold)">房主</b>，由你開始遊戲'
+      : '🙋 你是<b style="color:var(--c0)">玩家</b>，等待房主開始'
+  }
   renderRoleBtns([])
   show('room')
   document.getElementById('lobby-mug') && drawMug('lobby-mug')

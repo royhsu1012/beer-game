@@ -129,14 +129,6 @@ const GAME_CONFIG = {
 
   ROLES: ['retailer', 'wholesaler', 'distributor', 'manufacturer'],
 
-  EXCELLENT_THRESHOLD: {
-    retailer:     1500,
-    wholesaler:   2000,
-    distributor:  2500,
-    manufacturer: 3000,
-    team:         7000,
-  },
-
   generateDemandCurve,
 }
 
