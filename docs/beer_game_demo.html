@@ -301,7 +301,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
         <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center">
           <span style="color:var(--c2)">角色</span>
           <span style="color:var(--c2);text-align:right">賣價</span>
-          <span style="color:var(--pur);text-align:right">進貨價</span>
+          <span style="color:var(--pur);text-align:right">進貨/生產</span>
           <span style="color:var(--yel);text-align:right">庫存費</span>
           <span style="color:var(--red);text-align:right">缺貨罰</span>
           <span><span class="emoji">🏪</span> 零售</span>
@@ -321,10 +321,11 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
           <span style="color:var(--red);text-align:right">$5</span>
           <span><span class="emoji">🏭</span> 製造</span>
           <b style="color:var(--red);text-align:right">$10</b>
-          <span style="color:var(--pur);text-align:right">$4</span>
+          <span style="color:var(--pur);text-align:right">$4*</span>
           <span style="color:var(--yel);text-align:right">$3</span>
           <span style="color:var(--red);text-align:right">$3</span>
         </div>
+        <div style="font-size:11px;color:var(--c2);margin-top:6px">* 製造商為生產成本（原料＋人力），非進貨價</div>
       </div>
     </div>
   </div>
@@ -403,10 +404,11 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
         <span style="color:var(--red);text-align:right">$5</span>
         <span><span class="emoji">🏭</span> 製造</span>
         <b style="color:var(--red);text-align:right">$10</b>
-        <span style="color:var(--pur);text-align:right">$4</span>
+        <span style="color:var(--pur);text-align:right">$4*</span>
         <span style="color:var(--yel);text-align:right">$3</span>
         <span style="color:var(--red);text-align:right">$3</span>
       </div>
+      <div style="font-size:11px;color:var(--c2);margin-top:6px">* 製造商為生產成本（原料＋人力），非進貨價</div>
     </div>
   </div>
 
@@ -1266,7 +1268,7 @@ const ROLES=['retailer','wholesaler','distributor','manufacturer']
 
 // 各角色定價與成本（越接近消費者售價越高，但缺貨罰款也越重）
 const SELL_PRICE={retailer:30,wholesaler:20,distributor:14,manufacturer:10}
-// 向上游進貨單價（每週下單時扣除）
+// 進貨/生產成本（每週下單時扣除；製造商為生產成本）
 const BUY_PRICE={retailer:15,wholesaler:10,distributor:7,manufacturer:4}
 
 // 庫存費（/箱/週）：越上游庫存越貴（倉儲/原料積壓成本高）
@@ -1324,7 +1326,7 @@ const RCFG={
   manufacturer:{
     name:'製造商',emoji:'🏭',color:'var(--red)',
     title:'啤酒工廠老闆，供應鏈的源頭',
-    mission:'你的工廠每箱賣 $1.00，沒有進貨成本（自己生產）。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。',
+    mission:'你的工廠每箱賣 $10，每箱生產成本 $4（含原料+人力）。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。',
     see:['分銷商本週訂單量','成品庫存','生產線數量','積壓訂單'],
     blind:['分銷商庫存','下游一切','消費者需求'],
     target:'起始 $2000，優秀目標：帳戶 > $2200\n（理性策略可達 $2500-3000）',
