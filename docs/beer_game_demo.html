@@ -202,7 +202,12 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
   <div class="pbox" style="padding:20px;text-align:center;margin-bottom:14px">
     <canvas id="lobby-mug" width="96" height="72" style="width:96px;height:72px;display:block;margin:0 auto 14px"></canvas>
     <div style="font-size:20px;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
-    <div style="font-size:12px;color:var(--c2);margin-top:8px">四人連線多人版</div>
+    <div class="pdiv" style="margin:10px 0 8px"></div>
+    <div style="font-size:13px;color:var(--c1);line-height:1.9">
+      你是供應鏈上的一家公司老闆。<br>
+      <span class="emoji">💰</span> 賣出越多賺越多，<br>
+      但囤貨和缺貨都會虧錢！
+    </div>
   </div>
 
   <!-- 玩家名稱 -->
@@ -326,15 +331,9 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     ← 返回
   </button>
 
-  <div class="pbox" style="padding:20px;text-align:center;margin-bottom:14px">
-    <canvas id="c-mug" width="96" height="72" style="width:96px;height:72px;display:block;margin:0 auto 14px"></canvas>
-    <div style="font-size:24px;color:var(--gold)" class="glow">啤酒供應鏈遊戲</div>
-    <div class="pdiv" style="margin:12px 0 10px"></div>
-    <div style="font-size:13px;color:var(--c1);line-height:1.9">
-      你是供應鏈上的一家公司老闆。<br>
-      <span class="emoji">💰</span> 賣出越多賺越多，<br>
-      但囤貨和缺貨都會虧錢！
-    </div>
+  <div class="pbox" style="padding:12px 14px;text-align:center;margin-bottom:14px">
+    <div style="font-size:16px;color:var(--yel)">🎮 單人模式</div>
+    <div style="font-size:12px;color:var(--c2);margin-top:4px">AI 自動扮演其他三個角色</div>
   </div>
 
   <!-- 利潤公式 -->
@@ -1366,7 +1365,6 @@ function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.re
 function goHome(){clearInterval(timerID);show('home')}
 
 function initHome(){
-  drawMug('c-mug')
   const list=document.getElementById('role-list');list.innerHTML=''
   ROLES.forEach(r=>{
     const cfg=RCFG[r],sell=SELL_PRICE[r]
