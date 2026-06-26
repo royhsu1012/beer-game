@@ -292,30 +292,36 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <div style="font-size:12px;line-height:2.1;margin-bottom:10px">
         <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold)">$20000</b></div>
         <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
+        <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
         <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
         <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
       </div>
       <div style="font-size:12px;color:var(--c2);margin-bottom:6px">各角色的成本結構不同：</div>
       <div style="font-size:12px;line-height:2.2">
-        <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:4px 8px;align-items:center">
+        <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center">
           <span style="color:var(--c2)">角色</span>
           <span style="color:var(--c2);text-align:right">賣價</span>
+          <span style="color:var(--pur);text-align:right">進貨價</span>
           <span style="color:var(--yel);text-align:right">庫存費</span>
           <span style="color:var(--red);text-align:right">缺貨罰</span>
           <span><span class="emoji">🏪</span> 零售</span>
           <b style="color:var(--blue);text-align:right">$30</b>
+          <span style="color:var(--pur);text-align:right">$15</span>
           <span style="color:var(--yel);text-align:right">$1</span>
           <span style="color:var(--red);text-align:right">$10</span>
           <span><span class="emoji">📦</span> 批發</span>
           <b style="color:var(--grn);text-align:right">$20</b>
+          <span style="color:var(--pur);text-align:right">$10</span>
           <span style="color:var(--yel);text-align:right">$2</span>
           <span style="color:var(--red);text-align:right">$7</span>
           <span><span class="emoji">🚛</span> 分銷</span>
           <b style="color:var(--yel);text-align:right">$14</b>
+          <span style="color:var(--pur);text-align:right">$7</span>
           <span style="color:var(--yel);text-align:right">$2</span>
           <span style="color:var(--red);text-align:right">$5</span>
           <span><span class="emoji">🏭</span> 製造</span>
           <b style="color:var(--red);text-align:right">$10</b>
+          <span style="color:var(--pur);text-align:right">$4</span>
           <span style="color:var(--yel);text-align:right">$3</span>
           <span style="color:var(--red);text-align:right">$3</span>
         </div>
@@ -367,31 +373,37 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div style="font-size:13px;line-height:2.3">
       <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px">$20000</b></div>
       <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
+      <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
       <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
       <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
     </div>
     <div class="pdiv" style="margin:8px 0"></div>
     <div style="font-size:12px;color:var(--c2);margin-bottom:6px">各角色的成本結構不同：</div>
     <div style="font-size:12px;line-height:2.2">
-      <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr;gap:4px 8px;align-items:center">
+      <div style="display:grid;grid-template-columns:auto 1fr 1fr 1fr 1fr;gap:4px 6px;align-items:center">
         <span style="color:var(--c2)">角色</span>
         <span style="color:var(--c2);text-align:right">賣價</span>
+        <span style="color:var(--pur);text-align:right">進貨價</span>
         <span style="color:var(--yel);text-align:right">庫存費</span>
         <span style="color:var(--red);text-align:right">缺貨罰</span>
         <span><span class="emoji">🏪</span> 零售</span>
         <b style="color:var(--blue);text-align:right">$30</b>
+        <span style="color:var(--pur);text-align:right">$15</span>
         <span style="color:var(--yel);text-align:right">$1</span>
         <span style="color:var(--red);text-align:right">$10</span>
         <span><span class="emoji">📦</span> 批發</span>
         <b style="color:var(--grn);text-align:right">$20</b>
+        <span style="color:var(--pur);text-align:right">$10</span>
         <span style="color:var(--yel);text-align:right">$2</span>
         <span style="color:var(--red);text-align:right">$7</span>
         <span><span class="emoji">🚛</span> 分銷</span>
         <b style="color:var(--yel);text-align:right">$14</b>
+        <span style="color:var(--pur);text-align:right">$7</span>
         <span style="color:var(--yel);text-align:right">$2</span>
         <span style="color:var(--red);text-align:right">$5</span>
         <span><span class="emoji">🏭</span> 製造</span>
         <b style="color:var(--red);text-align:right">$10</b>
+        <span style="color:var(--pur);text-align:right">$4</span>
         <span style="color:var(--yel);text-align:right">$3</span>
         <span style="color:var(--red);text-align:right">$3</span>
       </div>
