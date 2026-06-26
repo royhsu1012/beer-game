@@ -117,7 +117,7 @@ const GAME_CONFIG = {
   TOTAL_WEEKS:       20,
   LEAD_TIME:         2,        // 前置時間（週）
   INITIAL_INVENTORY: 12,       // 期初庫存（各角色相同）
-  INITIAL_PIPELINE:  [4, 4],   // 期初在途 [下週到, 後週到]
+  INITIAL_PIPELINE:  [0, 0],   // 期初在途 [下週到, 後週到]
   // 各角色不同成本結構（整數，/箱/週）
   ROLE_COSTS: {
     retailer:     { holding: 1, shortage: 10 },
