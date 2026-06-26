@@ -372,13 +372,6 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     </div>
   </div>
 
-  <!-- 最高紀錄 -->
-  <div class="pbox" style="padding:14px">
-    <div style="font-size:14px;color:var(--gold);margin-bottom:10px">
-      <span class="emoji">🏆</span> 最高帳戶紀錄
-    </div>
-    <div id="hiscore" style="font-size:13px;color:var(--c2);line-height:2.2">尚無紀錄</div>
-  </div>
 
 </div>
 </div>
@@ -1359,7 +1352,7 @@ let GS=null,ROLE=null,SNAP=null
 let hCash=[],hInv=[],hOrd=[]
 let timerID=null,tLeft=60
 let submitting=false
-let HI=JSON.parse(localStorage.getItem('bgh6')||'[]')
+
 
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById('s-'+id).classList.add('on');window.scrollTo(0,0)}
 function goHome(){clearInterval(timerID);show('home')}
@@ -1388,16 +1381,6 @@ function initHome(){
     list.appendChild(div)
     setTimeout(()=>drawSpr('hs-'+r,r,32,40),30)
   })
-  const el=document.getElementById('hiscore')
-  if(!HI.length){el.innerHTML='<span style="color:var(--c2)">尚無紀錄，快來賺第一桶金！</span>';return}
-  el.innerHTML=HI.slice(0,5).map((h,i)=>{
-    const cash=h.c||START_CAPITAL
-    const diff=cash-START_CAPITAL
-    return`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--b1)">
-      <span>${['🥇','🥈','🥉','4.','5.'][i]} ${RCFG[h.r]?.emoji||''} ${RCFG[h.r]?.name||h.r}</span>
-      <span style="color:${cash>200?'var(--grn)':'var(--red)'}">$${cash.toFixed(0)} <span style="font-size:11px;color:var(--c2)">(${diff>=0?'+':''}$${diff.toFixed(0)})</span></span>
-    </div>`
-  }).join('')
 }
 
 function showRole(role){
@@ -1759,8 +1742,7 @@ function showDebrief(){
     `▸ 縮短前置時間，減少預測不確定性<br>`+
     `▸ 協同規劃（CPFR），統一預測而非各自猜測`
 
-  HI.push({r:ROLE,c:myCash});HI.sort((a,b)=>b.c-a.c);HI=HI.slice(0,10)
-  localStorage.setItem('bgh6',JSON.stringify(HI))
+
 
   // 每週明細表
   const hist = GS.roles[ROLE].history || []
