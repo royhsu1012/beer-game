@@ -120,10 +120,10 @@ const GAME_CONFIG = {
   INITIAL_PIPELINE:  [0, 0],   // 期初在途 [下週到, 後週到]
   // 各角色不同成本結構（整數，/箱/週）
   ROLE_COSTS: {
-    retailer:     { holding: 1, shortage: 10 },
+    retailer:     { holding: 3, shortage: 10 },
     wholesaler:   { holding: 2, shortage:  7 },
     distributor:  { holding: 2, shortage:  5 },
-    manufacturer: { holding: 3, shortage:  3 },
+    manufacturer: { holding: 1, shortage:  3 },
   },
   ROUND_TIME_SECONDS:60,       // 每週決策時限
 

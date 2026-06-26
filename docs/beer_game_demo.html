@@ -1236,12 +1236,12 @@ const SELL_PRICE={retailer:30,wholesaler:20,distributor:14,manufacturer:10}
 // 進貨/生產成本（每週下單時扣除；製造商為生產成本）
 const BUY_PRICE={retailer:20,wholesaler:11,distributor:5,manufacturer:2}
 
-// 庫存費（/箱/週）：越上游庫存越貴（倉儲/原料積壓成本高）
+// 庫存費（/箱/週）：越上游倉庫空間越大、庫存費越低；零售賣場空間貴
 const HOLD_COST={
-  retailer:    1,  // 貨架空間便宜
+  retailer:    3,  // 賣場貨架空間貴
   wholesaler:  2,  // 倉庫租金
   distributor: 2,  // 物流中心倉租
-  manufacturer:3,  // 原料+機器佔用成本最高
+  manufacturer:1,  // 工廠倉庫空間大，庫存費最低
 }
 // 缺貨罰款（/箱/週）：越接近消費者缺貨越貴（直接失去顧客）
 const SHORT_COST={
