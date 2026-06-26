@@ -7,6 +7,7 @@
 
 ### 安全
 - **伺服器端預算上限**：`submitOrder` 新增 `ORDER_EXCEEDS_BUDGET` 檢查，從 `weeklyHistory` 即時算出現金，拒絕 `quantity > floor(現金/進價)` 的下單。原本此上限只在前端強制，惡意玩家可繞過 UI 直接送超大訂單拉爆上游；現已於後端把關（規則與前端 `getMaxOrder` 一致）。
+- **Bot 下單同受預算上限**：`resolveWeek` 將 bot 的 `calcBotOrder` 結果以 `maxAffordableOrder` 夾住，與真人玩家規則一致，避免 bot 越界下單。
 - `gameConfig.js` 新增 `START_CAPITAL`、`SELL_PRICE`、`BUY_PRICE`（與前端一致），作為伺服器帳戶/預算計算來源。
 
 ### 修正

@@ -159,4 +159,4 @@ function findPlayerRoom(socketId) {
   return null
 }
 
-module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom }
+module.exports = { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom, maxAffordableOrder }

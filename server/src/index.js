@@ -1,7 +1,7 @@
 const express = require('express')
 const http = require('http')
 const { Server } = require('socket.io')
-const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom } = require('./RoomManager')
+const { createRoom, getRoom, addPlayer, removePlayer, reconnectPlayer, selectRole, deselectRole, addBot, removeBot, startGame, submitOrder, findPlayerRoom, resetRoom, maxAffordableOrder } = require('./RoomManager')
 const { processWeek, calculateResults } = require('./GameEngine')
 const { ROUND_TIME_SECONDS, ROLES } = require('./gameConfig')
 
@@ -61,7 +61,10 @@ function resolveWeek(roomCode) {
 
   for (const player of room.players.filter(p => p.isBot)) {
     if (room.gameState.pendingOrders[player.role] === undefined) {
-      room.gameState.pendingOrders[player.role] = calcBotOrder(room.gameState.roles[player.role])
+      const roleState = room.gameState.roles[player.role]
+      // Bot 下單同樣受預算上限約束（與真人一致）
+      const cap = maxAffordableOrder(roleState, player.role)
+      room.gameState.pendingOrders[player.role] = Math.min(calcBotOrder(roleState), cap)
     }
   }
 
