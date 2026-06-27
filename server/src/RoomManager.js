@@ -128,9 +128,14 @@ function startGame(code) {
   if (!room) return { error: 'ROOM_NOT_FOUND' }
   const humans = room.players.filter(p => !p.isBot)
   if (humans.length < 1) return { error: 'NOT_ENOUGH_PLAYERS' }
-  if (room.players.length < 2) return { error: 'NOT_ENOUGH_PLAYERS' }
   const assigned = room.players.filter(p => p.role !== null)
   if (assigned.length !== room.players.length) return { error: 'NOT_ALL_ROLES_ASSIGNED' }
+  // 允許單人開局：為仍空缺的角色自動補上 Bot（上下游皆有 AI 波動）
+  for (const role of ROLES) {
+    if (!room.players.find(p => p.role === role)) {
+      room.players.push({ socketId: null, name: '電腦', role, isBot: true })
+    }
+  }
   room.status = 'playing'
   room.gameState = initGameState()
   return { ok: true, room }

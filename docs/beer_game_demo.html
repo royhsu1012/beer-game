@@ -1076,16 +1076,15 @@ function renderRoomPlayers(players, status) {
     </div>`
   }).join('')
 
-  // 開始按鈕邏輯（至少 1 真人 + 共 2 人以上，所有人都已選角色）
+  // 開始按鈕邏輯（至少 1 真人、所有在場玩家都已選角色；空缺角色開局時自動補 Bot）
   const startBtn = document.getElementById('start-btn')
   const hint     = document.getElementById('start-hint')
   const humans   = players.filter(p => !p.isBot)
-  const allChosen = players.length >= 2 && players.every(p => p.role) && humans.length >= 1
+  const allChosen = humans.length >= 1 && players.every(p => p.role)
   if (isHost) {
     startBtn.style.display = allChosen ? 'block' : 'none'
-    hint.textContent = allChosen ? '' :
-      humans.length < 1 ? '至少需要 1 位真人玩家' :
-      players.length < 2 ? '請選角色或加入電腦玩家（至少 2 位）' : '等待所有玩家選好角色'
+    hint.textContent = allChosen ? '空缺角色將由電腦自動接手，可直接開始' :
+      humans.length < 1 ? '至少需要 1 位真人玩家' : '請先選好角色再開始'
   } else {
     startBtn.style.display = 'none'
     hint.textContent = '等待房主開始遊戲...'
@@ -1110,7 +1109,7 @@ function deselectRoleMulti() {
 function doStartGame() {
   socket.emit('start_game', { roomCode: myRoomCode }, (res) => {
     if (res.error) {
-      const msgs = { NOT_ENOUGH_PLAYERS:'至少需要2名玩家', NOT_ALL_ROLES_ASSIGNED:'還有玩家未選角色' }
+      const msgs = { NOT_ENOUGH_PLAYERS:'至少需要 1 位真人玩家', NOT_ALL_ROLES_ASSIGNED:'還有玩家未選角色' }
       showRoomErr(msgs[res.error] || res.error)
     }
   })
