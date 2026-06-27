@@ -388,7 +388,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
 <div id="s-role" class="screen">
 <div style="padding:14px 12px">
 
-  <button class="pbtn pbtn-b" onclick="show('home')"
+  <button id="rc-back" class="pbtn pbtn-b" onclick="show('home')"
     style="width:100%;font-size:13px;padding:8px;text-align:left;margin-bottom:10px">
     ← 返回
   </button>
@@ -1037,12 +1037,12 @@ function renderRoleBtns(players) {
         div.innerHTML = `
           <div style="font-size:14px">${cfg.label}</div>
           <div style="display:flex;gap:6px;margin-top:6px;justify-content:center">
-            <button class="role-sub-btn" onclick="selectRoleMulti('${role}')">👤 我玩</button>
+            <button class="role-sub-btn" onclick="showRole('${role}',true)">👤 我玩</button>
             <button class="role-sub-btn" onclick="addBotMulti('${role}')">🤖 電腦</button>
           </div>`
       } else {
         div.innerHTML = `<div style="font-size:14px">${cfg.label}</div><div style="font-size:11px;color:var(--c2);margin-top:4px">空位</div>`
-        div.onclick = () => selectRoleMulti(role)
+        div.onclick = () => showRole(role, true)
       }
     }
     container.appendChild(div)
@@ -1409,7 +1409,7 @@ function initHome(){
   })
 }
 
-function showRole(role){
+function showRole(role, multi){
   ROLE=role;const cfg=RCFG[role]
   document.getElementById('rc-name').textContent=`${cfg.emoji} ${cfg.name}`
   document.getElementById('rc-name').style.color=cfg.color
@@ -1419,10 +1419,27 @@ function showRole(role){
   document.getElementById('rc-see').innerHTML=cfg.see.map(s=>`<div>✓ ${s}</div>`).join('')
   document.getElementById('rc-blind').innerHTML=cfg.blind.map(s=>`<div>✗ ${s}</div>`).join('')
   document.getElementById('rc-tip').textContent=cfg.tip
-  document.getElementById('rc-go').style.borderColor=cfg.color
-  document.getElementById('rc-go').style.color=cfg.color
+  const go=document.getElementById('rc-go'), back=document.getElementById('rc-back')
+  go.style.borderColor=cfg.color; go.style.color=cfg.color
+  if(multi){
+    // 多人模式：read-only 預覽，底部改為「確認選這個角色」，返回回到房間
+    go.textContent='✓ 確認選這個角色'
+    go.onclick=()=>confirmRoleMulti(role)
+    back.onclick=()=>show('room')
+  }else{
+    go.textContent='▶ 開始賺錢！'
+    go.onclick=()=>enterGame()
+    back.onclick=()=>show('home')
+  }
   setTimeout(()=>drawSpr('rc-spr',role,80,96),30)
   show('role')
+}
+
+function confirmRoleMulti(role){
+  socket.emit('select_role',{roomCode:myRoomCode,role},(res)=>{
+    show('room')
+    if(res.error)showRoomErr({ROLE_TAKEN:'角色已被選走',INVALID_ROLE:'無效角色'}[res.error]||res.error)
+  })
 }
 
 function enterGame(){
