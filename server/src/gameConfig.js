@@ -121,12 +121,12 @@ const GAME_CONFIG = {
   START_CAPITAL:     2000,     // 起始資金（帳戶/預算上限用，須與前端一致）
   // 各角色售價與進貨/生產成本（與前端 docs/beer_game_demo.html 一致）
   SELL_PRICE: { retailer: 30, wholesaler: 20, distributor: 14, manufacturer: 10 },
-  BUY_PRICE:  { retailer: 12, wholesaler:  8, distributor:  6, manufacturer:  4 },
+  BUY_PRICE:  { retailer: 12, wholesaler:  6, distributor:  4, manufacturer:  2 },
   // 各角色不同成本結構（整數，/箱/週）
   ROLE_COSTS: {
     retailer:     { holding: 3, shortage: 9 },
     wholesaler:   { holding: 2, shortage: 6 },
-    distributor:  { holding: 2, shortage: 6 },
+    distributor:  { holding: 1, shortage: 3 },
     manufacturer: { holding: 1, shortage: 3 },
   },
   ROUND_TIME_SECONDS:60,       // 每週決策時限
