@@ -61,8 +61,9 @@ GameEngine.js
 │   ├── Step 5: 推進管道（[pipeline[1], 新訂單]）
 │   └── Step 6: 累計成本、記錄週歷史
 │
-└── calculateResults(finalState) → rankings
-    └── 排名、達標判定、需求模式標籤、全歷史
+└── calculateResults(finalState) → { demandInfo }
+    └── 只回傳需求模式揭曉資訊；各角色最終帳戶由前端從 fullHistory
+        以帳戶/利潤模型（賣出×售價 − 庫存費 − 缺貨罰 − 下單×進價）自行重算
 ```
 
 ---
@@ -91,14 +92,15 @@ create_room  → 生成6位房間碼，creatorId 記錄房主
 join_room    → 加入，上限4人
 add_bot      → 為空缺角色加入 Bot
 select_role  → 選擇角色（不可重複）
-start_game   → 須所有位置都有角色（人或Bot，最少2個）
+start_game   → 至少 1 位真人並選好角色即可開始
+               └→ 為空缺角色自動補上 Bot（單人也能開局）
                └→ initGameState() 建立本局遊戲狀態
                └→ 逐人發送 game_started（含個人初始狀態）
                └→ startRoundTimer(60s)
 
 [每週迴圈]
-submit_order → 玩家提交訂單
-               └→ Bot 自動計算訂單
+submit_order → 玩家提交訂單（受預算上限把關，見下）
+               └→ Bot 自動計算訂單（同樣夾在預算上限內）
                └→ 若全人類玩家都提交：立刻結算
                └→ 若計時到：自動補齊未提交者（沿用上週）
                └→ processWeek() 計算結果（try-catch 保護）
@@ -127,6 +129,21 @@ function calcBotOrder(roleState) {
   return Math.max(0, suggested + Math.floor(Math.random() * 5) - 2)
 }
 ```
+
+---
+
+## 預算上限（防惡意拉貨）
+
+下單量受現金約束，伺服器端把關（前端 UI 也會先夾）：
+
+```javascript
+// server/src/RoomManager.js
+// 現金 = 起始資金 + Σ(賣出×售價 − 庫存費 − 缺貨罰 − 下單×進價)
+// 最多可訂 = max(0, floor(現金 / 進價))
+// submitOrder 拒絕超過上限者 → ORDER_EXCEEDS_BUDGET
+```
+
+真人（即時提交）與 Bot 都套用同一上限，避免繞過 UI 直接送超大訂單拉爆上游。
 
 ---
 
