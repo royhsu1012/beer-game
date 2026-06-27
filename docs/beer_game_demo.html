@@ -905,6 +905,7 @@ async function wakeServer() {
 function doCreateRoom() {
   const name = document.getElementById('lobby-name').value.trim()
   if (!name) { showLobbyErr('請先輸入名稱'); return }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur() // 即時收鍵盤
   myName = name
   showLobbyErr('連線中，請稍候...')
   wakeServer().then(() => {
@@ -926,6 +927,7 @@ function doJoinRoom() {
   const code = document.getElementById('lobby-code').value.trim().toUpperCase()
   if (!name) { showLobbyErr('請先輸入名稱'); return }
   if (code.length !== 6) { showLobbyErr('房間代碼為 6 位數'); return }
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur() // 即時收鍵盤
   myName = name
   showLobbyErr('連線中，請稍候...')
   wakeServer().then(() => {
@@ -1376,6 +1378,8 @@ function show(id){
   const toTop=()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0}
   toTop()
   requestAnimationFrame(toTop)
+  // iOS 鍵盤收合動畫（約 300ms）後會重排，需延遲再捲一次才壓得住
+  setTimeout(toTop,60);setTimeout(toTop,300)
 }
 function goHome(){clearInterval(timerID);show('home')}
 
