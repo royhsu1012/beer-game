@@ -205,8 +205,8 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div class="pdiv" style="margin:10px 0 8px"></div>
     <div style="font-size:13px;color:var(--c1);line-height:1.9">
       你是供應鏈上的一家公司老闆。<br>
-      <span class="emoji">💰</span> 賣出越多賺越多，<br>
-      但囤貨和缺貨都會虧錢！
+      <span class="emoji">💰</span> 賣得掉才賺錢，<br>
+      囤貨和缺貨都燒錢！
     </div>
   </div>
 
@@ -296,13 +296,14 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
       <div style="font-size:13px;color:var(--c1);line-height:2.1;margin-bottom:12px">
         <div><span class="emoji">⏱️</span> 共 <b style="color:var(--c0)">20</b> 週，每週 <b style="color:var(--c0)">60</b> 秒決策</div>
         <div><span class="emoji">📦</span> 下單後 <b style="color:var(--c0)">2</b> 週才到貨</div>
+        <div><span class="emoji">🏬</span> 期初庫存 <b style="color:var(--c0)">12</b> 箱，前 <b style="color:var(--c0)">2</b> 週無到貨</div>
         <div><span class="emoji">🔒</span> 你只能看到自己的數據</div>
         <div><span class="emoji">🎲</span> 每局需求隨機，遊戲後揭曉</div>
       </div>
       <div style="font-size:13px;color:var(--grn);margin-bottom:8px"><span class="emoji">💰</span> 你的帳戶怎麼算？</div>
       <div style="font-size:12px;line-height:2.1;margin-bottom:10px">
         <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold)" class="start-capital-display"></b></div>
-        <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
+        <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">依角色售價進帳</b></div>
         <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
         <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
         <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
@@ -349,7 +350,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     </div>
     <div style="font-size:13px;line-height:2.3">
       <div><span class="emoji">🏦</span> 起始資金 <b style="color:var(--gold);font-size:16px" class="start-capital-display"></b></div>
-      <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">進帳 +$賣價</b></div>
+      <div><span class="emoji">📦</span> 每賣出 1 箱 <b style="color:var(--grn)">依角色售價進帳</b></div>
       <div><span class="emoji">🛒</span> 每叫 1 箱貨 <b style="color:var(--red)">扣除進貨價</b>（下單即扣）</div>
       <div><span class="emoji">🏭</span> 每箱庫存每週 <b style="color:var(--red)">扣除庫存費</b></div>
       <div><span class="emoji">💔</span> 每箱缺貨每週 <b style="color:var(--red)">扣除缺貨罰款</b></div>
@@ -373,6 +374,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
     <div style="font-size:13px;color:var(--c1);line-height:2.1">
       <div><span class="emoji">⏱️</span> 共 <b style="color:var(--c0)">20</b> 週，每週 <b style="color:var(--c0)">60</b> 秒決策</div>
       <div><span class="emoji">📦</span> 下單後 <b style="color:var(--c0)">2</b> 週才到貨</div>
+      <div><span class="emoji">🏬</span> 期初庫存 <b style="color:var(--c0)">12</b> 箱，前 <b style="color:var(--c0)">2</b> 週無到貨</div>
       <div><span class="emoji">🔒</span> 你只能看到自己的數據</div>
       <div><span class="emoji">🎲</span> 每局需求隨機，遊戲後揭曉</div>
     </div>
@@ -526,7 +528,7 @@ body::after{content:'';position:fixed;inset:0;z-index:9997;pointer-events:none;
         <div class="tile-lab">箱未出貨</div>
       </div>
       <div class="pbox" style="padding:8px;text-align:center">
-        <div class="tile-lab"><span class="emoji">🚚</span> 在途（LT 2週）</div>
+        <div class="tile-lab"><span class="emoji">🚚</span> 在途（下單後2週到）</div>
         <div id="g-pipe" style="font-size:16px;color:var(--pur)">8</div>
         <div class="tile-lab">箱</div>
       </div>
@@ -1217,12 +1219,13 @@ function genDemand(){
     curve.push(Math.max(1,Math.round(d)))
   }
   const max=Math.max(...curve),min=Math.min(...curve),maxW=curve.indexOf(max)+1
+  // 模式分類：先看衝擊次數，1 次時再依高峰位置判季節（與伺服器 gameConfig 一致）
   let mode,modeDesc
-  if(nShock>=2){mode='⚡ 雙重衝擊型';modeDesc='兩次突發需求衝擊，考驗快速應變能力。'}
-  else if(nShock===1){mode='💥 突發衝擊型';modeDesc=`第 ${shocks[0]?.w} 週附近需求暴增，之後迅速回落。`}
-  else if(maxW>=6&&maxW<=14){mode='☀️ 夏季旺季型';modeDesc='中段需求走高，提前備貨的公司賺最多。'}
-  else if(maxW>=14){mode='❄️ 冬季旺季型';modeDesc='後半段需求持續上升，後知後覺的公司損失慘重。'}
-  else{mode='📈 自然波動型';modeDesc='需求有漲有跌，最考驗各公司的預測能力。'}
+  if(nShock>=3){mode='⚡ 三重衝擊型';modeDesc='本局出現三次突發需求衝擊，全程高度警戒。'}
+  else if(nShock===2){mode='💥 雙重衝擊型';modeDesc='本局出現兩次突發需求衝擊，考驗快速應變能力。'}
+  else if(maxW>=6&&maxW<=14){mode='☀️ 夏季旺季型';modeDesc=`中段（第6-14週）需求走高，第 ${shocks[0]?.w} 週有一次衝擊，需提前備貨。`}
+  else if(maxW>14){mode='❄️ 冬季旺季型';modeDesc=`後半段需求持續走高，第 ${shocks[0]?.w} 週有突發衝擊，越到後期供應壓力越大。`}
+  else{mode='💥 突發衝擊型';modeDesc=`第 ${shocks[0]?.w} 週附近出現需求暴增，之後迅速回落。`}
   return{curve,mode,modeDesc,base:Math.round(min),peak:Math.round(max)}
 }
 
@@ -1297,13 +1300,13 @@ const RCFG={
     name:'製造商',emoji:'🏭',color:'var(--red)',
     title:'啤酒工廠老闆，供應鏈的源頭',
     mission:`你的工廠每箱賣 $${SELL_PRICE.manufacturer}，生產成本 $${BUY_PRICE.manufacturer}（原料+人力），毛利 $${SELL_PRICE.manufacturer-BUY_PRICE.manufacturer}。\n你是牛鞭效應的最終承受者，訂單波動最大！\n穩定生產才能抵消庫存和缺貨的雙重打擊。`,
-    see:['分銷商本週訂單量','成品庫存','生產線數量','積壓訂單'],
+    see:['分銷商本週訂單量','成品庫存','在製品（在途生產）','積壓訂單'],
     blind:['分銷商庫存','下游一切','消費者需求'],
     target:'起始 $2000，優秀目標：帳戶 > $2200\n（理性策略可達 $2500-3000）',
     tip:'你看到的訂單已被放大 3 層，要打折看！平穩生產比大起大落更賺錢。',
     qlabel:'本週生產幾箱？',dlabel:'分銷商訂單',
     threshold:2200,
-    hints:{5:'分銷商訂單跳了？先算：現有庫存 + 生產線夠嗎？別恐慌增產！',10:'生產量穩不穩定？大波動 = 大量庫存費或缺貨罰。',15:'快結束了！不要大量增產，那只會讓最後幾週付大量庫存費。'},
+    hints:{5:'分銷商訂單跳了？先算：現有庫存 + 在製品夠嗎？別恐慌增產！',10:'生產量穩不穩定？大波動 = 大量庫存費或缺貨罰。',15:'快結束了！不要大量增產，那只會讓最後幾週付大量庫存費。'},
   },
 }
 
@@ -1498,7 +1501,7 @@ function refreshUI(){
   // 決策脈絡
   const inv=rs.inventory,pipe=rs.pipeline[0]+rs.pipeline[1],back=rs.backlog
   // 建議訂購量：只用「自己看到的下游需求」計算，不偷看真實消費者需求
-    // 使用最近 1-3 週收到的下游訂單平均，× 1.2 安全係數
+    // 使用最近 1-3 週收到的下游訂單平均，目標庫存 = 平均 × 1.5
     const myHistory = GS.roles[ROLE].history
     const recentDemands = myHistory.slice(-3).map(h => h.dem)  // 最多取近3週
     const avgDemand = recentDemands.length > 0
@@ -1665,7 +1668,7 @@ function showDebrief(){
   else if(myCash>=thr){vEl.textContent='✅ 達到優秀目標！';vEl.style.color='var(--grn)'}
   else if(myProfit>0){vEl.textContent='⚠️ 小賺，但還能更好！';vEl.style.color='var(--yel)'}
   else if(myCash>0){vEl.textContent='❌ 虧損，帳戶縮水了';vEl.style.color='var(--red)'}
-  else{vEl.textContent='💸 帳戶歸零！破產！';vEl.style.color='var(--red)'}
+  else{vEl.textContent='💸 帳戶見底，負債累累！';vEl.style.color='var(--red)'}
 
   document.getElementById('db-breakdown').textContent=
     `賣出收入 +$${(res[ROLE].sold*SELL_PRICE[ROLE]).toFixed(0)}  庫存費 -$${res[ROLE].hc.toFixed(0)}  缺貨罰 -$${res[ROLE].sc.toFixed(0)}`
