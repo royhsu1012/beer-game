@@ -1368,7 +1368,15 @@ let timerID=null,tLeft=60
 let submitting=false
 
 
-function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'));document.getElementById('s-'+id).classList.add('on');window.scrollTo(0,0)}
+function show(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('on'))
+  document.getElementById('s-'+id).classList.add('on')
+  // 切畫面時關閉軟鍵盤並確實捲回頂端（手機鍵盤收合後常殘留視覺偏移）
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur()
+  const toTop=()=>{window.scrollTo(0,0);document.documentElement.scrollTop=0;document.body.scrollTop=0}
+  toTop()
+  requestAnimationFrame(toTop)
+}
 function goHome(){clearInterval(timerID);show('home')}
 
 function initHome(){
